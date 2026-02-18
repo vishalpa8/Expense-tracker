@@ -1,0 +1,36 @@
+package com.expensetracker.controller;
+
+import com.expensetracker.dto.TransactionRequest;
+import com.expensetracker.entity.Transaction;
+import com.expensetracker.entity.User;
+import com.expensetracker.service.AuthService;
+import com.expensetracker.service.TransactionService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/transactions")
+@RequiredArgsConstructor
+public class TransactionController {
+    private final TransactionService transactionService;
+    private final AuthService authService;
+    
+    @PostMapping
+    public ResponseEntity<Transaction> createTransaction(@RequestBody TransactionRequest request) {
+        return ResponseEntity.ok(transactionService.createTransaction(request));
+    }
+    
+    @GetMapping
+    public ResponseEntity<List<Transaction>> getTransactions(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
+            Authentication auth) {
+        User user = authService.getCurrentUser(auth.getName());
+        return ResponseEntity.ok(transactionService.getTransactionsByDateRange(user.getId(), start, end));
+    }
+}
