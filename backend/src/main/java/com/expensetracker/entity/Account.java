@@ -13,6 +13,9 @@ public class Account {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    @Version
+    private Long version;
+    
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;

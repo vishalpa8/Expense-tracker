@@ -3,7 +3,6 @@ dist/
 build/
 target/
 *.log
-.env
 .DS_Store
 *.class
 *.jar
@@ -11,3 +10,22 @@ target/
 .idea/
 .vscode/
 *.iml
+
+# Environment files (keep .env.example, ignore actual .env files)
+.env
+.env.local
+.env.*.local
+
+# Sensitive configuration (never commit these)
+**/application-*.properties.local
+**/*-secrets.properties
+
+# Backup files
+*.sql
+*.backup
+backup_*
+
+# IDE specific
+.project
+.classpath
+.settings/

@@ -8,7 +8,12 @@ import java.util.List;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
     List<Transaction> findByAccountIdOrderByTransactionDateDesc(Long accountId);
-    
+
     @Query("SELECT t FROM Transaction t WHERE t.account.user.id = :userId AND t.transactionDate BETWEEN :start AND :end ORDER BY t.transactionDate DESC")
     List<Transaction> findByUserIdAndDateRange(Long userId, LocalDateTime start, LocalDateTime end);
+
+    boolean existsByAccountId(Long accountId);
+
+    @Query("SELECT DISTINCT t.category FROM Transaction t WHERE t.account.user.id = :userId AND t.category IS NOT NULL ORDER BY t.category")
+    List<String> findDistinctCategoriesByUserId(Long userId);
 }
