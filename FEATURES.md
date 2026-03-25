@@ -8,152 +8,214 @@ A personal finance app to track your income, expenses, and bank account balances
 
 ### How to Access the App
 
-1. Open your browser and go to `http://localhost:5173` (frontend) — this is the main app you interact with.
+1. Open your browser and go to `http://localhost:5173` — this is the main app.
 2. The backend runs at `http://localhost:8080` — you don't need to open this directly.
 
-### First-Time Login
+### Creating Your Account
 
-A demo account is created automatically when the app starts for the first time:
+1. On the login screen, click "Sign Up" at the bottom.
+2. Enter your full name, choose a username, and set a password (minimum 6 characters).
+3. Click "Sign Up" — you'll be logged in automatically and taken to the dashboard.
 
+If the username you chose is already taken, you'll see a message asking you to pick a different one.
+
+### Logging In
+
+If you already have an account, enter your username and password on the login screen and click "Sign In".
+
+A demo account is available out of the box:
 - Username: `admin`
 - Password: `admin123`
 
-Enter these on the login screen and click "Sign In" to get started.
+### Session & Logging Out
 
-### Staying Logged In
-
-Once you sign in, you stay logged in for 24 hours. After that, you'll be automatically signed out and taken back to the login screen. You can also sign out anytime by clicking the "Logout" button in the top-right corner.
-
----
-
-## Features
-
-### 1. Dashboard Overview
-
-After logging in, you land on the dashboard. This is your main screen and shows everything at a glance:
-
-- **Total Balance** — the combined balance across all your accounts.
-- **Total Income** — how much money came in during the selected time period.
-- **Total Expenses** — how much money went out during the selected time period.
-
-These three cards update automatically whenever you change the time period or add new transactions.
+- You stay logged in for 24 hours. After that, you're automatically signed out with a message explaining why.
+- To log out manually, click the "Logout" button in the top-right corner of the dashboard.
 
 ---
 
-### 2. Managing Accounts
+## The Dashboard
 
-Accounts represent your bank accounts, wallets, or any place you keep money. You need at least one account before you can start recording transactions.
+After logging in, you land on the dashboard. This is your home screen and has three main sections:
 
-#### Adding an Account
+### Summary Cards (Top)
 
-1. Scroll down to the "Accounts" section on the dashboard.
-2. Click the "Add Account" button.
-3. Fill in the details:
-   - **Account Name** (required) — give it a name like "HDFC Savings", "Cash Wallet", or "Paytm".
-   - **Account Number** (optional) — you can add your account number for reference.
-   - **Opening Balance** (required) — the amount of money currently in this account.
-4. Click "Add Account" to save.
+Three cards at the top give you a quick snapshot:
 
-#### Viewing Your Accounts
-
-All your accounts appear as cards at the bottom of the dashboard. Each card shows:
-- The account name
-- The account number (if you added one)
-- The current balance
-
-The current balance updates automatically every time you add a transaction to that account.
+- **Total Balance** — the combined current balance across all your accounts.
+- **Total Income** — total money received in the selected month.
+- **Total Expenses** — total money spent in the selected month.
+- **Net** — shown at the bottom of the transactions section. This is income minus expenses for the month, so you can see if you saved or overspent.
 
 ---
 
-### 3. Recording Transactions
+## Managing Accounts
 
-Transactions are the core of the app — every time money comes in or goes out, you record it here.
+Accounts represent your bank accounts, wallets, UPI apps, or any place you keep money. You need at least one account before you can record transactions.
 
-#### Adding a Transaction
+### Adding an Account
 
-1. Click the "Add Transaction" button in the transactions section.
-   - Note: This button is disabled if you haven't created any accounts yet.
+1. In the "Accounts" section, click "Add Account".
+2. Fill in:
+   - **Account Name** (required) — e.g., "HDFC Savings", "Cash Wallet", "Paytm".
+   - **Account Number** (optional) — for your own reference.
+   - **Opening Balance** (required) — how much money is currently in this account.
+3. Click "Add Account".
+
+Note: You can't have two accounts with the same name.
+
+### Editing an Account
+
+1. Hover over an account card — a pencil icon appears in the top-right corner.
+2. Click the pencil icon.
+3. Update the name, account number, or balance.
+4. Click "Save Changes".
+
+### Deleting an Account
+
+1. Hover over an account card — a trash icon appears in the top-right corner.
+2. Click the trash icon.
+3. A confirmation dialog appears — click "Delete" to confirm, or "Cancel" to go back.
+
+Important: You cannot delete an account that has transactions. You must delete all its transactions first, or move them to another account by editing them.
+
+### Filtering by Account
+
+Click on any account card to filter the transactions table to show only that account's transactions. The card gets a blue border and a "Filtered" label when active. Click it again (or click the "X" on the filter chip above the table) to clear the filter.
+
+---
+
+## Recording Transactions
+
+Every time money comes in or goes out, record it as a transaction.
+
+### Adding a Transaction
+
+1. Click the "Add" button in the transactions section.
+   - This button is disabled if you have no accounts yet.
 2. Fill in the form:
-   - **Account** (required) — pick which account this transaction belongs to.
-   - **Type** (required) — choose "Income" if money came in, or "Expense" if money went out.
-   - **Amount** (required) — the transaction amount in rupees (₹). Must be greater than zero.
-   - **Date & Time** (required) — when the transaction happened. Defaults to right now.
-   - **Category** (optional) — label it however you like: Food, Transport, Salary, Rent, Shopping, etc.
-   - **Sender/Receiver** (optional) — who you paid or who paid you.
-   - **Payment Method** (required) — how the payment was made. Options:
+   - **Account** (required) — which account this transaction belongs to.
+   - **Type** (required):
+     - **Credit (Income)** — money coming in (salary, refund, gift, etc.)
+     - **Debit (Expense)** — money going out (food, rent, shopping, etc.)
+   - **Amount** (required) — the amount in ₹. Must be greater than zero.
+   - **Date & Time** (required) — when it happened. Defaults to right now.
+   - **Category / Tag** (optional) — label it: Food, Transport, Salary, Rent, Shopping, etc. As you type, previously used categories are suggested so you can stay consistent.
+   - **Sender / Receiver** (optional) — who you paid or who paid you.
+   - **Payment Method** (required) — how the payment was made:
      - UPI
      - Card
      - Cash
      - Bank Transfer
      - Other
    - **Payment Details** (optional) — extra info like a UPI ID, card name, or reference number.
-   - **Description** (optional) — any notes you want to add about this transaction.
-3. Click "Add Transaction" to save.
+   - **Description** (optional) — any notes about this transaction.
+3. Click "Add Transaction".
 
-#### What Happens When You Add a Transaction
+When you add a transaction, the account balance is automatically recalculated based on all transactions for that account.
 
-- If you add an **Income** transaction, the account balance goes up by that amount.
-- If you add an **Expense** transaction, the account balance goes down by that amount.
-- The dashboard summary cards (Total Income, Total Expenses, Total Balance) all update immediately.
+### Editing a Transaction
 
----
+1. Hover over any transaction row — a pencil icon appears on the right.
+2. Click it to open the edit form.
+3. You can change any field, including moving the transaction to a different account.
+4. Click "Save Changes".
 
-### 4. Viewing Transactions
+Both the old and new account balances are recalculated automatically.
 
-The transactions table on the dashboard shows all your transactions for the selected time period.
+### Deleting a Transaction
 
-#### Filtering by Time Period
+1. Hover over a transaction row — a trash icon appears on the right.
+2. Click it, then confirm in the dialog.
 
-Use the controls above the table to change what you see:
-
-- **Period selector** — switch between "Daily" and "Monthly":
-  - **Daily** — shows transactions for a single day. A date picker appears so you can pick the exact date.
-  - **Monthly** — shows transactions for an entire month. A month picker appears so you can pick the month and year.
-
-The table columns show:
-- Date and time
-- Type (Income or Expense, color-coded green and red)
-- Amount in ₹
-- Category
-- Description
-- Payment method
-
-If there are no transactions for the selected period, you'll see a message saying "No transactions yet."
+Note: You can only delete transactions from the current month. For past months, the delete button is hidden and you'll see a "Past (delete disabled)" label. You can still edit past transactions.
 
 ---
 
-### 5. Exporting Reports (CSV Download)
+## Viewing Transactions
 
-You can download your transactions as a spreadsheet file to keep records offline or share with others.
+### Monthly Navigation
 
-#### How to Export
+Use the month picker at the top of the transactions section to browse different months. The summary cards and transaction list update to show data for the selected month.
 
-1. Select the time period you want (daily or monthly) using the filters.
-2. Click the green "Export" button.
-3. A CSV file downloads automatically to your computer.
+### Sorting
 
-#### What's in the File
+In the "All" view, click on any column header to sort:
+- **Date** — newest first or oldest first
+- **Amount** — highest first or lowest first
+- **Category** — alphabetical
+- **Account** — alphabetical
 
-The downloaded file is named `expense-report-YYYY-MM-DD.csv` and contains these columns:
-- Date
-- Type (Income or Expense)
-- Amount
-- Category
-- Description
-- Sender/Receiver
-- Payment Method
-- Account Name
+Click the same header again to reverse the sort order. An arrow (↑ or ↓) shows the current direction.
 
-You can open this file in Excel, Google Sheets, or any spreadsheet app.
+### View Modes
+
+Switch between two views using the tabs above the transaction list:
+
+- **All** — a full table showing every transaction with all details in columns. Best for reviewing individual entries.
+- **By Category** — groups transactions by their category (Food, Salary, Rent, etc.). Each group shows the total income and expense for that category. Click a category to expand and see its individual transactions. Transactions without a category appear under "Uncategorized".
+
+### Account Filtering
+
+Click any account card to filter transactions to just that account. A blue chip appears above the table showing which account is filtered. Click the "X" on the chip to clear the filter.
 
 ---
 
-### 6. User Account & Security
+## Exporting Reports
 
-- **One user, private data** — each user can only see their own accounts and transactions. Nobody else can access your data.
-- **Passwords are encrypted** — your password is never stored in plain text.
-- **Automatic sign-out** — if your session expires (after 24 hours), you're safely logged out.
-- **Logout** — click the "Logout" button in the top-right corner anytime to sign out manually.
+Download your transactions as a CSV spreadsheet file.
+
+### How to Export
+
+1. Navigate to the month you want.
+2. Click the green "Export" button (only visible when there are transactions).
+3. A file downloads automatically.
+
+### What's in the File
+
+- Filename: `expense-report-YYYY-MM-DD.csv`
+- Columns: Date, Type, Amount, Category, Description, Sender/Receiver, Payment Method, Account
+- Opens in Excel, Google Sheets, Numbers, or any spreadsheet app.
+
+---
+
+## Notifications
+
+The app shows small popup messages (toasts) in the bottom-right corner to confirm actions or report errors:
+
+- **Green** — success (e.g., "Account created", "Transaction saved")
+- **Red** — error (e.g., "Cannot delete account with existing transactions")
+- **Blue** — informational
+
+These disappear automatically after a few seconds, or you can dismiss them by clicking the X.
+
+---
+
+## Error Messages
+
+The app shows clear, human-readable error messages instead of technical jargon:
+
+| What happened | What you'll see |
+|---|---|
+| Wrong username or password | "Wrong username or password. Please try again." |
+| Username taken during registration | "This username is already taken. Try a different one." |
+| Trying to delete an account with transactions | "This account has transactions. Delete or move them first." |
+| Duplicate account name | "You already have an account with this name." |
+| Session expired | "Your session has expired. Please sign in again." |
+| Server unreachable | "Unable to connect to the server. Please check your internet connection." |
+| Missing required fields | A specific message telling you which field needs attention |
+
+---
+
+## Keyboard Shortcuts
+
+| Key | Where | What it does |
+|---|---|---|
+| Escape | Any popup/modal | Closes the popup |
+| Enter | Delete confirmation dialog | Confirms the deletion |
+| Escape | Delete confirmation dialog | Cancels the deletion |
+
+All modals also close if you click outside them (on the dark background).
 
 ---
 
@@ -161,14 +223,22 @@ You can open this file in Excel, Google Sheets, or any spreadsheet app.
 
 | What you want to do | How to do it |
 |---|---|
-| Sign in | Go to the login page, enter username and password |
-| See your overall finances | Check the three summary cards at the top of the dashboard |
-| Add a bank account | Click "Add Account" in the Accounts section |
-| Record money coming in | Add a transaction with type "Income" |
-| Record money going out | Add a transaction with type "Expense" |
-| See today's transactions | Set the period to "Daily" and pick today's date |
-| See this month's transactions | Set the period to "Monthly" and pick the current month |
-| Download a report | Click the green "Export" button after selecting your time period |
+| Create a new user account | Click "Sign Up" on the login page |
+| Sign in | Enter username and password on the login page |
+| See your financial overview | Check the summary cards at the top of the dashboard |
+| Add a bank account or wallet | Click "Add Account" in the Accounts section |
+| Edit an account | Hover over the account card, click the pencil icon |
+| Delete an account | Hover over the account card, click the trash icon |
+| Record money coming in | Add a transaction with type "Credit (Income)" |
+| Record money going out | Add a transaction with type "Debit (Expense)" |
+| Edit a transaction | Hover over the row, click the pencil icon |
+| Delete a transaction | Hover over the row, click the trash icon (current month only) |
+| View a specific month | Use the month picker above the transactions table |
+| Sort transactions | Click a column header (Date, Amount, Category, Account) |
+| Group by category | Switch to "By Category" view tab |
+| Filter by account | Click an account card |
+| Clear account filter | Click the "X" on the blue filter chip |
+| Download a report | Click the green "Export" button |
 | Sign out | Click "Logout" in the top-right corner |
 
 ---
@@ -176,6 +246,9 @@ You can open this file in Excel, Google Sheets, or any spreadsheet app.
 ## Tips
 
 - **Create accounts first** — you can't add transactions until you have at least one account.
-- **Use categories consistently** — if you always label groceries as "Food", it's easier to track spending patterns in your exported reports.
-- **Check your balances** — the account cards at the bottom always show the latest balance, so you can quickly see where your money is.
-- **Export regularly** — download monthly reports to keep a backup of your financial records.
+- **Use categories consistently** — the app auto-suggests categories you've used before, so pick a naming convention and stick with it (e.g., always "Food" not sometimes "Food" and sometimes "Groceries").
+- **Categories are auto-capitalized** — if you type "food", it becomes "Food" automatically.
+- **Check net savings** — the "Net" figure at the bottom of the transactions section tells you if you saved or overspent that month.
+- **Use the category view** — switch to "By Category" to quickly see where most of your money is going.
+- **Export monthly** — download a CSV at the end of each month to keep a backup of your financial records.
+- **Move transactions between accounts** — if you recorded a transaction under the wrong account, just edit it and change the account. Both balances update automatically.
