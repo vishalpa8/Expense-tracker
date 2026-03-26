@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { accountApi, transactionApi } from '../api/client';
+import { accountApi, transactionApi, authApi } from '../api/client';
 import type { Account, Transaction } from '../types/index';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth, isBefore } from 'date-fns';
-import { LogOut, TrendingUp, TrendingDown, Wallet, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { LogOut, TrendingUp, TrendingDown, Wallet, ChevronLeft, ChevronRight, Loader2, Trash2 } from 'lucide-react';
 import { AddAccountModal, EditAccountModal } from '../components/AccountModals';
 import { AddTransactionModal, EditTransactionModal } from '../components/TransactionModals';
 import TransactionsSection from '../components/TransactionsSection';
@@ -27,6 +27,7 @@ const Dashboard: React.FC = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
   const [accountFilterId, setAccountFilterId] = useState<number | null>(null);
+  const [showDeleteUser, setShowDeleteUser] = useState(false);
   const { showToast } = useToast();
 
   const loadAccounts = useCallback(async () => {
@@ -82,6 +83,12 @@ const Dashboard: React.FC = () => {
       showToast('Transaction deleted successfully', 'success');
       await refresh();
     } catch (e) { showToast(getErrorMessage(e), 'error'); setDeletingTransaction(null); }
+  };
+  const handleDeleteUser = async () => {
+    try {
+      await authApi.deleteAccount();
+      logout();
+    } catch (e) { showToast(getErrorMessage(e), 'error'); setShowDeleteUser(false); }
   };
 
   const filteredTransactions = accountFilterId
@@ -147,6 +154,9 @@ const Dashboard: React.FC = () => {
               </div>
               <button onClick={logout} className="cursor-pointer flex items-center gap-1 px-3 py-2 text-red-600 hover:bg-red-50 rounded-xl font-medium text-sm">
                 <LogOut size={16} /><span className="hidden sm:inline">Logout</span>
+              </button>
+              <button onClick={() => setShowDeleteUser(true)} className="cursor-pointer flex items-center gap-1 px-3 py-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl text-sm" title="Delete Account">
+                <Trash2 size={16} />
               </button>
             </div>
           </div>
@@ -217,6 +227,7 @@ const Dashboard: React.FC = () => {
       {showAddTransaction && <AddTransactionModal accounts={accounts} selectedDate={selectedDate} onClose={async () => { setShowAddTransaction(false); await refresh(); }} />}
       {editingTransaction && <EditTransactionModal accounts={accounts} transaction={editingTransaction} onClose={async () => { setEditingTransaction(null); await refresh(); }} />}
       {deletingTransaction && <ConfirmModal title="Delete Transaction" message={`Delete this ₹${deletingTransaction.amount.toFixed(2)} ${deletingTransaction.type.toLowerCase()} transaction? The account balance will be reversed.`} onConfirm={handleDeleteTransaction} onCancel={() => setDeletingTransaction(null)} />}
+      {showDeleteUser && <ConfirmModal title="Delete Your Account" message="This will permanently delete your user account, all bank accounts, and all transactions. This cannot be undone." onConfirm={handleDeleteUser} onCancel={() => setShowDeleteUser(false)} />}
     </div>
   );
 };

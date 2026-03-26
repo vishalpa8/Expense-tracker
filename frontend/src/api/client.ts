@@ -42,6 +42,8 @@ export const authApi = {
     api.post('/auth/login', { username, password }),
   register: (username: string, password: string, fullName: string) =>
     api.post('/auth/register', { username, password, fullName }),
+  logout: () => api.post('/auth/logout'),
+  deleteAccount: () => api.delete('/auth/account'),
 };
 
 export const accountApi = {

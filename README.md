@@ -11,6 +11,10 @@ A personal finance application for tracking income, expenses, and bank account b
 ## Features
 
 - **JWT Authentication** — register/login with secure token-based sessions (24h expiry)
+- **Server-side Logout** — token blacklist invalidates sessions immediately
+- **Rate Limiting** — 20 requests/minute per IP on auth endpoints (Bucket4j)
+- **Paginated Transactions** — server-side pagination with configurable page size (max 500)
+- **Delete Account** — permanently delete user profile with all data
 - **Multiple Accounts** — track bank accounts, wallets, UPI apps with individual balances
 - **Transaction Management** — record income/expenses with category, description, payment method
 - **Overdraft Protection** — prevents spending more than available balance
@@ -32,7 +36,8 @@ A personal finance application for tracking income, expenses, and bank account b
 | Backend | Java 21, Spring Boot 3.2, Spring Security, Spring Data JPA |
 | Frontend | React 19, TypeScript 5.9, Vite 7, Tailwind CSS 4 |
 | Database | PostgreSQL 15 |
-| Auth | JWT (jjwt 0.12) |
+| Auth | JWT (jjwt 0.12), in-memory token blacklist |
+| Rate Limiting | Bucket4j |
 | Icons | Lucide React |
 | Dates | date-fns |
 
@@ -60,9 +65,6 @@ export JWT_SECRET=$(openssl rand -base64 32)
 # Build and run JAR (recommended — single JVM, less memory)
 ./mvnw clean package -DskipTests
 java -jar target/expense-tracker-1.0.0.jar
-
-# Or run with Maven (dev mode — spawns two JVMs)
-./mvnw spring-boot:run
 ```
 Backend starts on `http://localhost:8080`
 
@@ -92,9 +94,9 @@ Frontend starts on `http://localhost:5173`
 │       ├── controller/      # REST endpoints (Auth, Account, Transaction)
 │       ├── dto/             # Request DTOs with validation (@Digits, @DecimalMax, @Size)
 │       ├── entity/          # JPA entities with indexes, constraints, optimistic locking
-│       ├── exception/       # Typed exceptions (5 classes, not generic RuntimeException)
+│       ├── exception/       # Typed exceptions (5 classes)
 │       ├── repository/      # Spring Data JPA with custom JPQL queries
-│       ├── security/        # JWT utility and stateless auth filter
+│       ├── security/        # JWT, auth filter, token blacklist, rate limiter
 │       └── service/         # Business logic with sanitization and balance validation
 ├── frontend/
 │   └── src/
@@ -109,22 +111,24 @@ Frontend starts on `http://localhost:5173`
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login` | Login, returns JWT |
-| GET | `/api/accounts` | List user's accounts |
-| GET | `/api/accounts/balances?asOf=` | Account balances at a point in time |
-| POST | `/api/accounts` | Create account |
-| PUT | `/api/accounts/:id` | Update account name/number |
-| DELETE | `/api/accounts/:id` | Delete account (no transactions) |
-| GET | `/api/transactions?start=&end=` | Transactions in date range |
-| GET | `/api/transactions/categories` | User's distinct categories |
-| POST | `/api/transactions` | Create transaction |
-| PUT | `/api/transactions/:id` | Update transaction |
-| DELETE | `/api/transactions/:id` | Delete transaction |
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/auth/register` | No | Register new user |
+| POST | `/api/auth/login` | No | Login, returns JWT |
+| POST | `/api/auth/logout` | Yes | Blacklist current token |
+| DELETE | `/api/auth/account` | Yes | Delete user and all data |
+| GET | `/api/accounts` | Yes | List user's accounts |
+| GET | `/api/accounts/balances?asOf=` | Yes | Historical balances |
+| POST | `/api/accounts` | Yes | Create account |
+| PUT | `/api/accounts/:id` | Yes | Update account |
+| DELETE | `/api/accounts/:id` | Yes | Delete account |
+| GET | `/api/transactions?start=&end=` | Yes | Transactions in date range (paginated) |
+| GET | `/api/transactions/categories` | Yes | User's categories |
+| POST | `/api/transactions` | Yes | Create transaction |
+| PUT | `/api/transactions/:id` | Yes | Update transaction |
+| DELETE | `/api/transactions/:id` | Yes | Delete transaction |
 
-See [API Documentation](docs/API_DOCUMENTATION.md) for full request/response details.
+See [API Documentation](docs/API_DOCUMENTATION.md) for full details.
 
 ## Business Rules
 
@@ -138,34 +142,22 @@ See [API Documentation](docs/API_DOCUMENTATION.md) for full request/response det
 - Past months show historical balances, not current balance
 - Accounts only appear in months after their creation date
 - All text inputs sanitized (HTML tags stripped)
+- Auth endpoints rate-limited to 20 requests/minute per IP
 
 ## Security
 
 - BCrypt password hashing
 - JWT with HMAC-SHA256 (256-bit key, no hardcoded defaults)
-- Stateless sessions (no server-side session storage)
+- Token blacklist for server-side logout
+- Rate limiting on auth endpoints (Bucket4j, 20/min per IP)
 - Security headers: X-Content-Type-Options, X-Frame-Options (DENY), HSTS
-- CORS restricted to configured origins (OPTIONS method supported)
+- CORS restricted to configured origins
 - Ownership checks on all resource access
 - Input sanitization on all text fields (XSS prevention)
 - No internal IDs or version fields exposed in API responses
-- Credentials and secrets require environment variables (no defaults in config)
-
-## Database Schema
-
-```
-users (id, username, password, full_name, created_at)
-  └── accounts (id, user_id, account_name, account_number, opening_balance[14,2], current_balance[14,2], version, created_at)
-        └── transactions (id, account_id, type, amount[12,2], transaction_date, category, description, sender_receiver, payment_method, payment_details, version, created_at)
-```
-
-- Indexes on `accounts.user_id`, `transactions.account_id`, `transactions.transaction_date`
-- Unique constraint on `(user_id, account_name)`
-- Optimistic locking via `@Version` on both Account and Transaction
+- Credentials and secrets require environment variables
 
 ## Error Handling
-
-Backend uses typed exceptions mapped to HTTP status codes:
 
 | Exception | Status | Example |
 |-----------|--------|---------|
@@ -173,19 +165,19 @@ Backend uses typed exceptions mapped to HTTP status codes:
 | `AccessDeniedException` | 403 | Accessing another user's resource |
 | `InvalidCredentialsException` | 401 | Wrong password |
 | `DuplicateResourceException` | 409 | Account name already exists |
-| `BusinessRuleException` | 400 | Insufficient balance, future date |
+| `BusinessRuleException` | 400 | Insufficient balance |
 | `OptimisticLockException` | 409 | Concurrent modification |
-| `MissingServletRequestParameterException` | 400 | Missing required query param |
-| `HttpRequestMethodNotSupportedException` | 405 | PATCH on a PUT-only endpoint |
-| Unexpected errors | 500 | Logged server-side, generic message to client |
+| `MissingServletRequestParameterException` | 400 | Missing query param |
+| `HttpRequestMethodNotSupportedException` | 405 | Wrong HTTP method |
+| Rate limit exceeded | 429 | Too many requests |
+| Unexpected errors | 500 | Logged, generic message to client |
 
 ## Known Limitations
 
-- No rate limiting on auth endpoints (brute force possible)
-- No pagination on transaction listing (unbounded response)
-- No token revocation (stolen JWTs valid until 24h expiry)
 - No database migration tool (uses Hibernate ddl-auto in dev)
 - No unit/integration tests
+- Token blacklist is in-memory (lost on restart; use Redis for production)
+- Entities returned directly (user/version hidden via @JsonIgnore; full DTOs would decouple API from schema)
 
 ## Documentation
 

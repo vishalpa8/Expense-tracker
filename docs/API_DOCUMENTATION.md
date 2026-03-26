@@ -7,12 +7,14 @@ http://localhost:8080/api
 
 ## Authentication
 
-All endpoints except `/auth/*` require a JWT token:
+All endpoints except `/auth/login` and `/auth/register` require a JWT token:
 ```
 Authorization: Bearer <token>
 ```
 
-Tokens expire after 24 hours. On 401 response, the frontend automatically logs out via event dispatch (no hard page reload).
+Tokens expire after 24 hours. Tokens can be invalidated early via the logout endpoint. On 401 response, the frontend automatically logs out.
+
+Auth endpoints are rate-limited to 20 requests/minute per IP. Exceeding the limit returns `429 Too Many Requests`.
 
 ---
 
@@ -46,6 +48,7 @@ All text fields are sanitized (HTML tags stripped).
 
 **Errors:**
 - `409` — "Username already taken"
+- `429` — "Too many requests. Please try again later."
 
 ### Login
 **POST** `/auth/login`
@@ -67,6 +70,23 @@ All text fields are sanitized (HTML tags stripped).
 
 **Errors:**
 - `401` — "Invalid credentials"
+- `429` — "Too many requests. Please try again later."
+
+### Logout
+**POST** `/auth/logout`
+
+Blacklists the current JWT token. The token becomes invalid immediately.
+
+**Response:** `204 No Content`
+
+### Delete User Account
+**DELETE** `/auth/account`
+
+Permanently deletes the authenticated user's account, including all bank accounts and all transactions. The JWT token is blacklisted after deletion.
+
+**Response:** `204 No Content`
+
+This action cannot be undone.
 
 ---
 
@@ -94,13 +114,14 @@ Returns all accounts for the authenticated user. Internal fields (`user`, `versi
 ### Get Balances at Date
 **GET** `/accounts/balances?asOf=2026-02-28T23:59:59`
 
-Returns each account's balance as of the given date (opening balance + net transactions up to that date). Used by the frontend to show historical balances when viewing past months.
+Returns each account's balance as of the given date (opening balance + net transactions up to that date).
 
 **Response:** `200 OK`
 ```json
 {
   "1": { "balance": 9200.00 },
   "2": { "balance": 3000.00 }
+}
 ```
 
 **Errors:**
@@ -135,7 +156,7 @@ Validation:
 }
 ```
 
-Note: `openingBalance` is not updatable. Only name and number can be changed. Duplicate name check is enforced on rename.
+Note: `openingBalance` is not updatable. Duplicate name check is enforced on rename.
 
 **Errors:**
 - `404` — "Account not found"
@@ -159,7 +180,11 @@ Note: `openingBalance` is not updatable. Only name and number can be changed. Du
 ### List Transactions by Date Range
 **GET** `/transactions?start=2026-02-01T00:00:00&end=2026-02-28T23:59:59`
 
-Both `start` and `end` are required. Use local datetime format (no timezone suffix). Returns transactions ordered by date descending.
+Both `start` and `end` are required. Use local datetime format (no timezone suffix).
+
+Optional pagination parameters:
+- `page` — page number, 0-indexed (default: `0`)
+- `size` — results per page, 1-500 (default: `500`)
 
 **Response:** `200 OK`
 ```json
@@ -193,8 +218,6 @@ Both `start` and `end` are required. Use local datetime format (no timezone suff
 ### Get User Categories
 **GET** `/transactions/categories`
 
-Returns distinct non-null categories used by the user, sorted alphabetically.
-
 **Response:** `200 OK`
 ```json
 ["Food", "Rent", "Salary", "Shopping"]
@@ -221,16 +244,12 @@ Validation:
 - `accountId`: required
 - `type`: required, `INCOME` or `EXPENSE`
 - `amount`: required, positive, max ₹99,999,999.99, max 2 decimal places
-- `transactionDate`: required, local datetime format, cannot be in the future
+- `transactionDate`: required, local datetime, cannot be in the future
 - `category`: optional, max 100 chars, HTML sanitized
 - `description`: optional, max 500 chars, HTML sanitized
 - `senderReceiver`: optional, max 200 chars, HTML sanitized
 - `paymentMethod`: required, one of `UPI`, `CARD`, `CASH`, `BANK_TRANSFER`, `OTHER`
 - `paymentDetails`: optional, max 200 chars, HTML sanitized
-
-**Business rules:**
-- Expenses cannot exceed account's current balance
-- Account balance is recalculated after creation via SQL SUM
 
 **Errors:**
 - `400` — "Insufficient balance. Available: ₹X"
@@ -243,20 +262,12 @@ Validation:
 ### Update Transaction
 **PUT** `/transactions/:id`
 
-Same body as create. Can change account, type, amount, or any field.
-
-**Business rules:**
-- If changing to EXPENSE or increasing expense amount, balance is validated
-- Both old and new account balances are recalculated
-- Optimistic locking prevents concurrent update conflicts
+Same body as create. Optimistic locking prevents concurrent update conflicts.
 
 ### Delete Transaction
 **DELETE** `/transactions/:id`
 
 **Response:** `204 No Content`
-
-**Business rules:**
-- Deleting an income transaction is blocked if it would make the account balance negative
 
 **Errors:**
 - `400` — "Cannot delete this income. Account balance would go negative"
@@ -276,13 +287,14 @@ All errors return:
 
 | Status | When |
 |--------|------|
-| 400 | Validation failure, business rule violation, missing required params |
+| 400 | Validation failure, business rule violation, missing params |
 | 401 | Invalid credentials, expired token |
 | 403 | Accessing another user's resource |
 | 404 | Resource not found |
 | 405 | Unsupported HTTP method |
 | 409 | Duplicate resource, optimistic lock conflict |
-| 500 | Unexpected server error (details logged, not exposed) |
+| 429 | Rate limit exceeded |
+| 500 | Unexpected server error (logged, not exposed) |
 
 ## Security Headers
 
@@ -293,4 +305,4 @@ All responses include:
 
 ## Date/Time Handling
 
-All datetime values use local datetime format without timezone suffix (e.g., `2026-02-15T10:30:00`). The frontend sends local datetimes directly — no UTC conversion. This ensures the stored time matches the user's intended time regardless of server timezone.
+All datetime values use local datetime format without timezone suffix (e.g., `2026-02-15T10:30:00`). The frontend sends local datetimes directly — no UTC conversion.

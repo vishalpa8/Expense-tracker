@@ -7,16 +7,21 @@ import com.expensetracker.entity.User;
 import com.expensetracker.exception.DuplicateResourceException;
 import com.expensetracker.exception.InvalidCredentialsException;
 import com.expensetracker.exception.ResourceNotFoundException;
+import com.expensetracker.repository.AccountRepository;
+import com.expensetracker.repository.TransactionRepository;
 import com.expensetracker.repository.UserRepository;
 import com.expensetracker.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
     private final UserRepository userRepository;
+    private final AccountRepository accountRepository;
+    private final TransactionRepository transactionRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
@@ -36,11 +41,9 @@ public class AuthService {
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(InvalidCredentialsException::new);
-
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new InvalidCredentialsException();
         }
-
         String token = jwtUtil.generateToken(user.getUsername());
         return new AuthResponse(token, user.getUsername());
     }
@@ -48,5 +51,13 @@ public class AuthService {
     public User getCurrentUser(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+
+    @Transactional
+    public void deleteUser(String username) {
+        User user = getCurrentUser(username);
+        transactionRepository.deleteAllByUserId(user.getId());
+        accountRepository.deleteAllByUserId(user.getId());
+        userRepository.delete(user);
     }
 }

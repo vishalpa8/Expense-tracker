@@ -17,10 +17,22 @@ A personal finance app to track your income, expenses, and bank account balances
 
 Enter your username and password on the login screen and click "Sign In".
 
+Note: Login and registration are rate-limited to 20 attempts per minute. If you exceed this, wait a minute and try again.
+
 ### Session & Logging Out
 
 - You stay logged in for 24 hours. After that, you're automatically signed out.
-- To log out manually, click "Logout" in the top-right corner.
+- To log out manually, click "Logout" in the top-right corner. Your token is invalidated immediately on the server.
+
+### Deleting Your Account
+
+If you want to permanently delete your account and all data:
+
+1. Click the trash icon (🗑) in the top-right corner of the dashboard (next to Logout).
+2. A confirmation dialog appears warning that all accounts and transactions will be deleted.
+3. Click "Delete" to confirm. You'll be logged out and redirected to the login page.
+
+This action is irreversible — all your bank accounts, transactions, and user profile are permanently removed.
 
 ---
 
@@ -61,7 +73,7 @@ You can't have two accounts with the same name. HTML tags in names are automatic
 
 ### Editing an Account
 
-Hover over (or tap on mobile) an account card — pencil icon appears. Click it to edit the name or account number. The balance is shown read-only — it's calculated from transactions. Renaming to an existing account name is blocked.
+Hover over (or tap on mobile) an account card — pencil icon appears. Click it to edit the name or account number. The balance is shown read-only. Renaming to an existing account name is blocked.
 
 ### Deleting an Account
 
@@ -73,7 +85,7 @@ Click any account card to filter transactions to just that account. Click again 
 
 ### Historical Balances
 
-When viewing a past month, account cards show the balance as of that month's end — not the current live balance. Accounts that didn't exist yet in a past month are hidden.
+When viewing a past month, account cards show the balance as of that month's end. Accounts that didn't exist yet in a past month are hidden.
 
 ---
 
@@ -100,11 +112,10 @@ All text fields are sanitized — HTML tags are automatically stripped.
 
 - You cannot create an expense that exceeds the account's current balance.
 - Deleting an income transaction is blocked if it would make the balance go negative.
-- The app shows the exact available balance in the error message.
 
 ### Editing a Transaction
 
-Hover over a transaction row — pencil icon appears. You can change any field, including moving it to a different account. Both account balances are recalculated. If two people edit the same transaction simultaneously, the second save gets a conflict error (optimistic locking).
+Hover over a transaction row — pencil icon appears. You can change any field, including moving it to a different account. If two people edit the same transaction simultaneously, the second save gets a conflict error (optimistic locking).
 
 ### Deleting a Transaction
 
@@ -116,12 +127,12 @@ Hover over a transaction row — trash icon appears. Confirm in the dialog.
 
 ### Sorting
 
-Click column headers to sort: Date, Amount, Category, Account. Click again to reverse. Arrow shows direction.
+Click column headers to sort: Date, Amount, Category, Account. Click again to reverse.
 
 ### View Modes
 
 - **All** — full table with all columns
-- **By Category** — grouped by category with income/expense totals per group. Click a category to expand.
+- **By Category** — grouped by category with income/expense totals per group
 
 ### Account Filtering
 
@@ -134,7 +145,7 @@ Click an account card to filter. A blue chip shows the active filter. Click X to
 1. Navigate to the desired month.
 2. Click the green "Export" button.
 3. CSV downloads with columns: Date, Type, Amount, Category, Description, From/To, Method, Details, Account.
-4. Filename includes the account name when filtered (e.g., `expense-report-2026-02-HDFC_Savings.csv`).
+4. Filename includes the account name when filtered.
 
 ---
 
@@ -163,7 +174,7 @@ Auto-dismiss after 4 seconds, or click X.
 | Amount too large | "Amount cannot exceed ₹99,999,999.99" |
 | Too many decimals | "Amount must have at most 2 decimal places" |
 | Concurrent edit conflict | "This record was modified by another request. Please refresh and try again." |
-| Missing query parameter | "Missing required parameter: start" |
+| Too many login attempts | "Too many requests. Please try again later." |
 | Session expired | "Your session has expired. Please sign in again." |
 | Server down | "Unable to connect to the server. Please check your internet connection." |
 
@@ -186,5 +197,5 @@ Auto-dismiss after 4 seconds, or click X.
 - **Check net savings** — the Net figure tells you if you saved or overspent.
 - **Use category view** — quickly see where most money goes.
 - **Export monthly** — download CSV at month end for backup.
-- **Move transactions** — edit a transaction to change its account if you picked the wrong one.
+- **Move transactions** — edit a transaction to change its account.
 - **Run as JAR** — `java -jar target/expense-tracker-1.0.0.jar` uses half the memory of `mvnw spring-boot:run`.
