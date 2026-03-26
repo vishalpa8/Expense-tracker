@@ -35,11 +35,11 @@ const Dashboard: React.FC = () => {
 
   const loadTransactions = useCallback(async () => {
     try {
-      const start = startOfMonth(selectedDate);
-      const end = endOfMonth(selectedDate);
+      const start = format(startOfMonth(selectedDate), "yyyy-MM-dd'T'HH:mm:ss");
+      const end = format(endOfMonth(selectedDate), "yyyy-MM-dd'T'HH:mm:ss");
       const [txnRes, balRes] = await Promise.all([
-        transactionApi.getByDateRange(start.toISOString(), end.toISOString()),
-        accountApi.getBalancesAt(end.toISOString()),
+        transactionApi.getByDateRange(start, end),
+        accountApi.getBalancesAt(end),
       ]);
       setTransactions(txnRes.data);
       const balMap: Record<number, number> = {};
@@ -93,10 +93,10 @@ const Dashboard: React.FC = () => {
   const monthEnd = endOfMonth(selectedDate);
   const visibleAccounts = accounts.filter(a => new Date(a.createdAt) <= monthEnd);
 
-  const totalIncome = filteredTransactions.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
-  const totalExpense = filteredTransactions.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0);
-  const monthlyNet = totalIncome - totalExpense;
-  const totalBalance = visibleAccounts.reduce((s, a) => s + (monthBalances[a.id] ?? a.currentBalance), 0);
+  const totalIncome = filteredTransactions.filter((t) => t.type === 'INCOME').reduce((s, t) => s + Math.round(t.amount * 100), 0) / 100;
+  const totalExpense = filteredTransactions.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + Math.round(t.amount * 100), 0) / 100;
+  const monthlyNet = Math.round((totalIncome - totalExpense) * 100) / 100;
+  const totalBalance = visibleAccounts.reduce((s, a) => s + Math.round((monthBalances[a.id] ?? a.currentBalance) * 100), 0) / 100;
 
   const accountsWithMonthBalance = visibleAccounts.map(a => ({
     ...a,
@@ -114,8 +114,10 @@ const Dashboard: React.FC = () => {
       ...filteredTransactions.map((t) => [format(new Date(t.transactionDate), 'dd/MM/yyyy HH:mm'), t.type, t.amount, t.category||'', t.description||'', t.senderReceiver||'', t.paymentMethod, t.paymentDetails||'', t.account.accountName]),
     ].map((r) => r.map(sanitizeCsvField).join(',')).join('\n');
     const suffix = accountFilterName ? `-${accountFilterName.replace(/\s+/g, '_')}` : '';
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const a = document.createElement('a'); a.href = url;
     a.download = `expense-report-${format(selectedDate, 'yyyy-MM')}${suffix}.csv`; a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (

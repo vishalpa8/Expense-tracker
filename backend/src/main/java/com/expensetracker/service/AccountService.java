@@ -27,7 +27,7 @@ public class AccountService {
 
     @Transactional
     public Account createAccount(User user, AccountRequest request) {
-        String name = request.getAccountName().trim();
+        String name = sanitize(request.getAccountName());
         if (name.isEmpty()) {
             throw new BusinessRuleException("Account name cannot be blank");
         }
@@ -37,12 +37,13 @@ public class AccountService {
         Account account = new Account();
         account.setUser(user);
         account.setAccountName(name);
-        account.setAccountNumber(request.getAccountNumber());
+        account.setAccountNumber(sanitize(request.getAccountNumber()));
         account.setOpeningBalance(request.getOpeningBalance());
         account.setCurrentBalance(request.getOpeningBalance());
         return accountRepository.save(account);
     }
 
+    @Transactional(readOnly = true)
     public List<Account> getUserAccounts(Long userId) {
         return accountRepository.findByUserId(userId);
     }
@@ -50,13 +51,16 @@ public class AccountService {
     @Transactional
     public Account updateAccount(User user, Long accountId, AccountUpdateRequest request) {
         Account account = getOwnedAccount(user, accountId);
-        String newName = request.getAccountName().trim();
+        String newName = sanitize(request.getAccountName());
+        if (newName.isEmpty()) {
+            throw new BusinessRuleException("Account name cannot be blank");
+        }
         if (!account.getAccountName().equalsIgnoreCase(newName)
                 && accountRepository.existsByUserIdAndAccountNameIgnoreCase(user.getId(), newName)) {
             throw new DuplicateResourceException("Account with this name already exists");
         }
         account.setAccountName(newName);
-        account.setAccountNumber(request.getAccountNumber());
+        account.setAccountNumber(sanitize(request.getAccountNumber()));
         return accountRepository.save(account);
     }
 
@@ -69,15 +73,14 @@ public class AccountService {
         accountRepository.delete(account);
     }
 
+    @Transactional(readOnly = true)
     public Map<Long, Map<String, Object>> getBalancesAt(Long userId, LocalDateTime asOf) {
         List<Account> accounts = accountRepository.findByUserId(userId);
         Map<Long, Map<String, Object>> result = new HashMap<>();
         for (Account account : accounts) {
             BigDecimal netUntil = transactionRepository.calculateNetAmountUntil(account.getId(), asOf);
             BigDecimal balanceAtDate = account.getOpeningBalance().add(netUntil);
-            Map<String, Object> entry = new HashMap<>();
-            entry.put("balance", balanceAtDate);
-            result.put(account.getId(), entry);
+            result.put(account.getId(), Map.of("balance", balanceAtDate));
         }
         return result;
     }
@@ -89,5 +92,10 @@ public class AccountService {
             throw new AccessDeniedException();
         }
         return account;
+    }
+
+    private String sanitize(String input) {
+        if (input == null) return null;
+        return input.replaceAll("<[^>]*>", "").trim();
     }
 }

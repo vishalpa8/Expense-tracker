@@ -1,7 +1,6 @@
 import React from 'react';
 import type { Account } from '../types/index';
 import { Wallet, Pencil, Trash2, Plus } from 'lucide-react';
-import { format } from 'date-fns';
 
 interface Props {
   accounts: Account[];

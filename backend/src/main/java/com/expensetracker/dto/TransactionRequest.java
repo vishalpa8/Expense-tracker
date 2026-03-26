@@ -1,9 +1,7 @@
 package com.expensetracker.dto;
 
 import com.expensetracker.entity.Transaction;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -12,7 +10,9 @@ import java.time.LocalDateTime;
 public class TransactionRequest {
     @NotNull private Long accountId;
     @NotNull private Transaction.TransactionType type;
-    @NotNull @Positive private BigDecimal amount;
+    @NotNull @Positive @DecimalMax(value = "99999999.99", message = "Amount cannot exceed ₹99,999,999.99")
+    @Digits(integer = 8, fraction = 2, message = "Amount must have at most 2 decimal places")
+    private BigDecimal amount;
     @NotNull private LocalDateTime transactionDate;
     @Size(max = 100) private String category;
     @Size(max = 500) private String description;

@@ -99,7 +99,7 @@ export const AddTransactionModal: React.FC<{ accounts: Account[]; selectedDate: 
   });
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); if (loading) return; setLoading(true); setError('');
-    try { await transactionApi.create({ ...formData, amount: parseFloat(formData.amount) || 0, transactionDate: new Date(formData.transactionDate).toISOString() }); onClose(); }
+    try { await transactionApi.create({ ...formData, amount: parseFloat(formData.amount) || 0, transactionDate: formData.transactionDate + ':00' }); onClose(); }
     catch (err) { setError(getErrorMessage(err)); setLoading(false); }
   };
   return (
@@ -121,7 +121,7 @@ export const EditTransactionModal: React.FC<{ accounts: Account[]; transaction: 
   });
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); if (loading) return; setLoading(true); setError('');
-    try { await transactionApi.update(transaction.id, { ...formData, amount: parseFloat(formData.amount) || 0, transactionDate: new Date(formData.transactionDate).toISOString() }); onClose(); }
+    try { await transactionApi.update(transaction.id, { ...formData, amount: parseFloat(formData.amount) || 0, transactionDate: formData.transactionDate + ':00' }); onClose(); }
     catch (err) { setError(getErrorMessage(err)); setLoading(false); }
   };
   return (

@@ -10,6 +10,7 @@ import com.expensetracker.exception.ResourceNotFoundException;
 import com.expensetracker.repository.AccountRepository;
 import com.expensetracker.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -47,7 +48,6 @@ public class TransactionService {
                 ? oldAccount
                 : getOwnedAccount(user, request.getAccountId());
 
-        // If moving to a new account or increasing expense, validate balance
         if (request.getType() == Transaction.TransactionType.EXPENSE) {
             BigDecimal currentExpenseContribution = BigDecimal.ZERO;
             if (existing.getType() == Transaction.TransactionType.EXPENSE && existing.getAccount().getId().equals(newAccount.getId())) {
@@ -78,7 +78,6 @@ public class TransactionService {
         if (!account.getUser().getId().equals(user.getId())) {
             throw new AccessDeniedException();
         }
-        // If deleting an income, check that balance won't go negative
         if (transaction.getType() == Transaction.TransactionType.INCOME) {
             BigDecimal balanceAfter = account.getCurrentBalance().subtract(transaction.getAmount());
             if (balanceAfter.compareTo(BigDecimal.ZERO) < 0) {
@@ -89,10 +88,12 @@ public class TransactionService {
         recalculateBalance(account);
     }
 
-    public List<Transaction> getTransactionsByDateRange(Long userId, LocalDateTime start, LocalDateTime end) {
-        return transactionRepository.findByUserIdAndDateRange(userId, start, end);
+    @Transactional(readOnly = true)
+    public List<Transaction> getTransactionsByDateRange(Long userId, LocalDateTime start, LocalDateTime end, int page, int size) {
+        return transactionRepository.findByUserIdAndDateRange(userId, start, end, PageRequest.of(page, size));
     }
 
+    @Transactional(readOnly = true)
     public List<String> getUserCategories(Long userId) {
         return transactionRepository.findDistinctCategoriesByUserId(userId);
     }
@@ -125,15 +126,15 @@ public class TransactionService {
         t.setType(r.getType());
         t.setAmount(r.getAmount());
         t.setTransactionDate(r.getTransactionDate());
-        t.setCategory(normalizeCategory(r.getCategory()));
-        t.setDescription(r.getDescription());
-        t.setSenderReceiver(r.getSenderReceiver());
+        t.setCategory(sanitize(r.getCategory()));
+        t.setDescription(sanitize(r.getDescription()));
+        t.setSenderReceiver(sanitize(r.getSenderReceiver()));
         t.setPaymentMethod(r.getPaymentMethod());
-        t.setPaymentDetails(r.getPaymentDetails());
+        t.setPaymentDetails(sanitize(r.getPaymentDetails()));
     }
 
-    private String normalizeCategory(String category) {
-        if (category == null || category.isBlank()) return null;
-        return category.trim();
+    private String sanitize(String input) {
+        if (input == null || input.isBlank()) return null;
+        return input.replaceAll("<[^>]*>", "").trim();
     }
 }

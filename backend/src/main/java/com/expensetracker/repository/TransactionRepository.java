@@ -1,6 +1,7 @@
 package com.expensetracker.repository;
 
 import com.expensetracker.entity.Transaction;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import java.math.BigDecimal;
@@ -10,7 +11,7 @@ import java.util.List;
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
     @Query("SELECT t FROM Transaction t WHERE t.account.user.id = :userId AND t.transactionDate BETWEEN :start AND :end ORDER BY t.transactionDate DESC")
-    List<Transaction> findByUserIdAndDateRange(Long userId, LocalDateTime start, LocalDateTime end);
+    List<Transaction> findByUserIdAndDateRange(Long userId, LocalDateTime start, LocalDateTime end, Pageable pageable);
 
     boolean existsByAccountId(Long accountId);
 

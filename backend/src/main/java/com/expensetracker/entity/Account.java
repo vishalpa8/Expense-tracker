@@ -1,6 +1,6 @@
 package com.expensetracker.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,11 +21,12 @@ public class Account {
     private Long id;
 
     @Version
+    @JsonIgnore
     private Long version;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JsonIgnore
     private User user;
 
     @Column(name = "account_name", nullable = false, length = 100)
@@ -34,10 +35,10 @@ public class Account {
     @Column(length = 50)
     private String accountNumber;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal openingBalance = BigDecimal.ZERO;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal currentBalance = BigDecimal.ZERO;
 
     @CreationTimestamp

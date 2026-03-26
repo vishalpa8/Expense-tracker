@@ -1,9 +1,6 @@
 package com.expensetracker.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 import java.math.BigDecimal;
 
@@ -16,5 +13,7 @@ public class AccountRequest {
     private String accountNumber;
 
     @NotNull @PositiveOrZero
+    @DecimalMax(value = "99999999.99", message = "Balance cannot exceed ₹99,999,999.99")
+    @Digits(integer = 8, fraction = 2, message = "Balance must have at most 2 decimal places")
     private BigDecimal openingBalance;
 }

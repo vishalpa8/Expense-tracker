@@ -1,6 +1,5 @@
 package com.expensetracker.security;
 
-import com.expensetracker.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,18 +17,18 @@ import java.util.ArrayList;
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
-    private final UserRepository userRepository;
+    private final TokenBlacklist tokenBlacklist;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String header = request.getHeader("Authorization");
 
-        if (header != null && header.startsWith("Bearer ")) {
+        if (header != null && header.startsWith("Bearer ") && SecurityContextHolder.getContext().getAuthentication() == null) {
             String token = header.substring(7);
-            if (jwtUtil.validateToken(token)) {
+            if (!tokenBlacklist.isBlacklisted(token) && jwtUtil.validateToken(token)) {
                 String username = jwtUtil.extractUsername(token);
-                if (username != null && userRepository.findByUsername(username).isPresent()) {
+                if (username != null) {
                     UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                             username, null, new ArrayList<>());
                     auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
