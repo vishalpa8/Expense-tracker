@@ -7,396 +7,264 @@ http://localhost:8080/api
 
 ## Authentication
 
-All endpoints except `/auth/login` require JWT token in Authorization header:
+All endpoints except `/auth/*` require a JWT token:
 ```
 Authorization: Bearer <token>
 ```
 
+Tokens expire after 24 hours. On 401 response, the frontend automatically logs out.
+
 ---
 
-## Authentication Endpoints
+## Auth Endpoints
+
+### Register
+**POST** `/auth/register`
+
+```json
+{
+  "username": "john_doe",
+  "password": "secret123",
+  "fullName": "John Doe"
+}
+```
+
+Validation:
+- `username`: 3-30 chars, alphanumeric + underscores only, must be unique
+- `password`: 6-100 chars
+- `fullName`: max 100 chars
+
+**Response:** `200 OK`
+```json
+{
+  "token": "eyJhbGci...",
+  "username": "john_doe"
+}
+```
+
+**Errors:**
+- `409` — "Username already taken"
 
 ### Login
 **POST** `/auth/login`
 
-Authenticate user and receive JWT token.
-
-**Request Body:**
 ```json
 {
-  "username": "admin",
-  "password": "admin123"
+  "username": "john_doe",
+  "password": "secret123"
 }
 ```
 
 **Response:** `200 OK`
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "username": "admin"
+  "token": "eyJhbGci...",
+  "username": "john_doe"
 }
 ```
 
-**Error:** `401 Unauthorized`
-```json
-{
-  "message": "Invalid credentials"
-}
-```
+**Errors:**
+- `401` — "Invalid credentials"
 
 ---
 
 ## Account Endpoints
 
-### Get All Accounts
+### List Accounts
 **GET** `/accounts`
-
-Retrieve all accounts for authenticated user.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
 
 **Response:** `200 OK`
 ```json
 [
   {
     "id": 1,
-    "accountName": "Main Bank Account",
-    "accountNumber": "1234567890",
+    "accountName": "HDFC Savings",
+    "accountNumber": "XXXX-1234",
     "openingBalance": 10000.00,
-    "currentBalance": 15000.00,
-    "createdAt": "2026-02-18T08:00:00Z",
-    "user": {
-      "id": 1,
-      "username": "admin"
-    }
+    "currentBalance": 8500.00,
+    "createdAt": "2026-02-18T08:00:00",
+    "version": 3
   }
 ]
+```
+
+### Get Balances at Date
+**GET** `/accounts/balances?asOf=2026-02-28T23:59:59`
+
+Returns each account's balance as of the given date (opening balance + net transactions up to that date).
+
+**Response:** `200 OK`
+```json
+{
+  "1": { "balance": 9200.00 },
+  "2": { "balance": 3000.00 }
+}
 ```
 
 ### Create Account
 **POST** `/accounts`
 
-Create a new account for authenticated user.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Request Body:**
 ```json
 {
-  "accountName": "Savings Account",
-  "accountNumber": "9876543210",
-  "openingBalance": 5000.00
+  "accountName": "HDFC Savings",
+  "accountNumber": "XXXX-1234",
+  "openingBalance": 10000.00
 }
 ```
 
-**Response:** `200 OK`
+Validation:
+- `accountName`: required, max 100 chars, unique per user
+- `accountNumber`: optional, max 50 chars
+- `openingBalance`: required, >= 0
+
+**Errors:**
+- `409` — "Account with this name already exists"
+
+### Update Account
+**PUT** `/accounts/:id`
+
 ```json
 {
-  "id": 2,
-  "accountName": "Savings Account",
-  "accountNumber": "9876543210",
-  "openingBalance": 5000.00,
-  "currentBalance": 5000.00,
-  "createdAt": "2026-02-18T08:30:00Z",
-  "user": {
-    "id": 1,
-    "username": "admin"
-  }
+  "accountName": "HDFC Savings Updated",
+  "accountNumber": "XXXX-5678"
 }
 ```
+
+Note: `openingBalance` is not updatable. Only name and number can be changed.
+
+**Errors:**
+- `404` — "Account not found"
+- `403` — "Access denied"
+- `409` — "Account with this name already exists"
+
+### Delete Account
+**DELETE** `/accounts/:id`
+
+**Response:** `204 No Content`
+
+**Errors:**
+- `404` — "Account not found"
+- `403` — "Access denied"
+- `400` — "Cannot delete account with existing transactions"
 
 ---
 
 ## Transaction Endpoints
 
-### Get Transactions by Date Range
-**GET** `/transactions`
+### List Transactions by Date Range
+**GET** `/transactions?start=2026-02-01T00:00:00Z&end=2026-02-28T23:59:59Z`
 
-Retrieve transactions for authenticated user within date range.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Query Parameters:**
-- `start` (required): ISO 8601 datetime (e.g., `2026-02-01T00:00:00Z`)
-- `end` (required): ISO 8601 datetime (e.g., `2026-02-28T23:59:59Z`)
-
-**Example:**
-```
-GET /transactions?start=2026-02-01T00:00:00Z&end=2026-02-28T23:59:59Z
-```
+Both `start` and `end` are required, ISO 8601 format. Returns transactions ordered by date descending.
 
 **Response:** `200 OK`
 ```json
 [
   {
     "id": 1,
-    "type": "INCOME",
-    "amount": 5000.00,
-    "transactionDate": "2026-02-15T10:30:00Z",
-    "category": "Salary",
-    "description": "Monthly salary",
-    "senderReceiver": "Company XYZ",
-    "paymentMethod": "BANK_TRANSFER",
-    "paymentDetails": "Direct deposit",
-    "createdAt": "2026-02-15T10:30:00Z",
-    "account": {
-      "id": 1,
-      "accountName": "Main Bank Account",
-      "currentBalance": 15000.00
-    }
-  },
-  {
-    "id": 2,
     "type": "EXPENSE",
     "amount": 500.00,
-    "transactionDate": "2026-02-16T14:20:00Z",
+    "transactionDate": "2026-02-15T10:30:00",
     "category": "Food",
     "description": "Grocery shopping",
-    "senderReceiver": "Supermarket ABC",
+    "senderReceiver": "BigBasket",
     "paymentMethod": "UPI",
     "paymentDetails": "user@upi",
-    "createdAt": "2026-02-16T14:20:00Z",
+    "createdAt": "2026-02-15T10:30:00",
     "account": {
       "id": 1,
-      "accountName": "Main Bank Account",
-      "currentBalance": 14500.00
+      "accountName": "HDFC Savings",
+      "currentBalance": 8500.00
     }
   }
 ]
 ```
 
+### Get User Categories
+**GET** `/transactions/categories`
+
+Returns distinct non-null categories used by the user, sorted alphabetically.
+
+**Response:** `200 OK`
+```json
+["Food", "Rent", "Salary", "Shopping"]
+```
+
 ### Create Transaction
 **POST** `/transactions`
 
-Create a new transaction and update account balance.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Request Body:**
 ```json
 {
   "accountId": 1,
   "type": "EXPENSE",
-  "amount": 1200.50,
-  "transactionDate": "2026-02-18T15:30:00Z",
-  "category": "Shopping",
-  "description": "Electronics purchase",
-  "senderReceiver": "Tech Store",
-  "paymentMethod": "CARD",
-  "paymentDetails": "Visa ending 1234"
+  "amount": 500.00,
+  "transactionDate": "2026-02-15T10:30:00",
+  "category": "Food",
+  "description": "Grocery shopping",
+  "senderReceiver": "BigBasket",
+  "paymentMethod": "UPI",
+  "paymentDetails": "user@upi"
 }
 ```
 
-**Field Descriptions:**
-- `accountId` (required): ID of the account
-- `type` (required): `INCOME` or `EXPENSE`
-- `amount` (required): Transaction amount (positive number)
-- `transactionDate` (required): ISO 8601 datetime
-- `category` (optional): Transaction category
-- `description` (optional): Additional details
-- `senderReceiver` (optional): Name of sender (for income) or receiver (for expense)
-- `paymentMethod` (required): `UPI`, `CARD`, `CASH`, `BANK_TRANSFER`, or `OTHER`
-- `paymentDetails` (optional): UPI ID, card name, etc.
+Validation:
+- `accountId`: required
+- `type`: required, `INCOME` or `EXPENSE`
+- `amount`: required, must be positive
+- `transactionDate`: required, cannot be in the future
+- `category`: optional, max 100 chars
+- `description`: optional, max 500 chars
+- `senderReceiver`: optional, max 200 chars
+- `paymentMethod`: required, one of `UPI`, `CARD`, `CASH`, `BANK_TRANSFER`, `OTHER`
+- `paymentDetails`: optional, max 200 chars
 
-**Response:** `200 OK`
-```json
-{
-  "id": 3,
-  "type": "EXPENSE",
-  "amount": 1200.50,
-  "transactionDate": "2026-02-18T15:30:00Z",
-  "category": "Shopping",
-  "description": "Electronics purchase",
-  "senderReceiver": "Tech Store",
-  "paymentMethod": "CARD",
-  "paymentDetails": "Visa ending 1234",
-  "createdAt": "2026-02-18T15:30:00Z",
-  "account": {
-    "id": 1,
-    "accountName": "Main Bank Account",
-    "currentBalance": 13299.50
-  }
-}
-```
+**Business rules:**
+- Expenses cannot exceed account's current balance
+- Account balance is recalculated after creation
+
+**Errors:**
+- `400` — "Insufficient balance. Available: ₹X"
+- `400` — "Transaction date cannot be in the future"
+- `404` — "Account not found"
+- `403` — "Access denied"
+
+### Update Transaction
+**PUT** `/transactions/:id`
+
+Same body as create. Can change account, type, amount, or any field.
+
+**Business rules:**
+- If changing to EXPENSE or increasing expense amount, balance is validated
+- Both old and new account balances are recalculated
+
+### Delete Transaction
+**DELETE** `/transactions/:id`
+
+**Response:** `204 No Content`
+
+**Business rules:**
+- Deleting an income transaction is blocked if it would make the account balance negative
+
+**Errors:**
+- `400` — "Cannot delete this income. Account balance would go negative"
+- `404` — "Transaction not found"
+- `403` — "Access denied"
 
 ---
 
-## Data Models
+## Error Response Format
 
-### User
-```typescript
-{
-  id: number;
-  username: string;
-  fullName: string;
-  createdAt: string; // ISO 8601
-}
-```
-
-### Account
-```typescript
-{
-  id: number;
-  accountName: string;
-  accountNumber?: string;
-  openingBalance: number;
-  currentBalance: number;
-  createdAt: string; // ISO 8601
-  user: User;
-}
-```
-
-### Transaction
-```typescript
-{
-  id: number;
-  type: 'INCOME' | 'EXPENSE';
-  amount: number;
-  transactionDate: string; // ISO 8601
-  category?: string;
-  description?: string;
-  senderReceiver?: string;
-  paymentMethod: 'UPI' | 'CARD' | 'CASH' | 'BANK_TRANSFER' | 'OTHER';
-  paymentDetails?: string;
-  createdAt: string; // ISO 8601
-  account: Account;
-}
-```
-
----
-
-## Error Responses
-
-### 401 Unauthorized
+All errors return:
 ```json
 {
-  "timestamp": "2026-02-18T08:00:00Z",
-  "status": 401,
-  "error": "Unauthorized",
-  "message": "Invalid or expired token"
+  "error": "Human-readable error message"
 }
 ```
 
-### 400 Bad Request
-```json
-{
-  "timestamp": "2026-02-18T08:00:00Z",
-  "status": 400,
-  "error": "Bad Request",
-  "message": "Validation failed",
-  "errors": [
-    {
-      "field": "amount",
-      "message": "Amount must be positive"
-    }
-  ]
-}
-```
-
-### 404 Not Found
-```json
-{
-  "timestamp": "2026-02-18T08:00:00Z",
-  "status": 404,
-  "error": "Not Found",
-  "message": "Account not found"
-}
-```
-
-### 500 Internal Server Error
-```json
-{
-  "timestamp": "2026-02-18T08:00:00Z",
-  "status": 500,
-  "error": "Internal Server Error",
-  "message": "An unexpected error occurred"
-}
-```
-
----
-
-## Example Usage with cURL
-
-### Login
-```bash
-curl -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}'
-```
-
-### Get Accounts
-```bash
-curl -X GET http://localhost:8080/api/accounts \
-  -H "Authorization: Bearer <your-token>"
-```
-
-### Create Account
-```bash
-curl -X POST http://localhost:8080/api/accounts \
-  -H "Authorization: Bearer <your-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "accountName": "Cash Wallet",
-    "openingBalance": 1000.00
-  }'
-```
-
-### Get Transactions
-```bash
-curl -X GET "http://localhost:8080/api/transactions?start=2026-02-01T00:00:00Z&end=2026-02-28T23:59:59Z" \
-  -H "Authorization: Bearer <your-token>"
-```
-
-### Create Transaction
-```bash
-curl -X POST http://localhost:8080/api/transactions \
-  -H "Authorization: Bearer <your-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "accountId": 1,
-    "type": "EXPENSE",
-    "amount": 250.00,
-    "transactionDate": "2026-02-18T12:00:00Z",
-    "category": "Food",
-    "description": "Lunch",
-    "paymentMethod": "UPI",
-    "paymentDetails": "user@paytm"
-  }'
-```
-
----
-
-## Rate Limiting
-
-Currently no rate limiting is implemented. For production deployment, consider:
-- 100 requests per minute per user
-- 1000 requests per hour per user
-- Implement using Spring Security or API Gateway
-
-## Security Notes
-
-1. **JWT Expiration**: Tokens expire after 24 hours (configurable in `application.properties`)
-2. **Password Storage**: Passwords are hashed using BCrypt
-3. **CORS**: Configured to allow requests from `http://localhost:5173`
-4. **HTTPS**: Use HTTPS in production environments
-5. **Secret Key**: Change JWT secret in production (`jwt.secret` property)
-
-## Testing
-
-Use tools like:
-- **Postman**: Import API collection
-- **cURL**: Command-line testing
-- **HTTPie**: User-friendly HTTP client
-- **Insomnia**: REST client with GraphQL support
+| Status | When |
+|--------|------|
+| 400 | Validation failure, business rule violation |
+| 401 | Invalid credentials, expired token |
+| 403 | Accessing another user's resource |
+| 404 | Resource not found |
+| 409 | Duplicate resource, optimistic lock conflict |
+| 500 | Unexpected server error (details logged, not exposed) |

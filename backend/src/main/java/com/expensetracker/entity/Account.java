@@ -1,36 +1,59 @@
 package com.expensetracker.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
-@Table(name = "accounts")
-@Data
+@Table(name = "accounts",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "account_name"}),
+    indexes = @Index(name = "idx_account_user_id", columnList = "user_id"))
+@Getter
+@Setter
 public class Account {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @Version
     private Long version;
-    
-    @ManyToOne
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User user;
-    
-    @Column(nullable = false)
+
+    @Column(name = "account_name", nullable = false, length = 100)
     private String accountName;
-    
+
+    @Column(length = 50)
     private String accountNumber;
-    
+
     @Column(nullable = false)
     private BigDecimal openingBalance = BigDecimal.ZERO;
-    
+
     @Column(nullable = false)
     private BigDecimal currentBalance = BigDecimal.ZERO;
-    
-    @Column(nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Account account = (Account) o;
+        return id != null && id.equals(account.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
+    }
 }

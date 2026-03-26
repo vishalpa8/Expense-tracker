@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Account } from '../types/index';
 import { Wallet, Pencil, Trash2, Plus } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface Props {
   accounts: Account[];
@@ -35,17 +36,19 @@ const AccountsSection: React.FC<Props> = ({ accounts, totalBalance, activeAccoun
           const isActive = activeAccountId === acc.id;
           return (
             <div key={acc.id}
+              role="button" tabIndex={0}
               onClick={() => onFilter(isActive ? null : acc.id)}
-              className={`border rounded-2xl p-5 bg-gradient-to-br from-white to-gray-50 group cursor-pointer transition-all ${
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onFilter(isActive ? null : acc.id); } }}
+              className={`border rounded-2xl p-5 bg-gradient-to-br from-white to-gray-50 group cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 ${
                 isActive
                   ? 'border-blue-500 ring-2 ring-blue-200 shadow-md'
                   : 'border-gray-200 hover:shadow-md hover:border-blue-200'
               }`}>
               <div className="flex items-start justify-between mb-2">
                 <h3 className="font-bold text-gray-900 text-lg">{acc.accountName}</h3>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => onEdit(acc)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit"><Pencil size={14} /></button>
-                  <button onClick={() => onDelete(acc)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Delete"><Trash2 size={14} /></button>
+                <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                  <button onClick={() => onEdit(acc)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit" aria-label={`Edit ${acc.accountName}`}><Pencil size={14} /></button>
+                  <button onClick={() => onDelete(acc)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Delete" aria-label={`Delete ${acc.accountName}`}><Trash2 size={14} /></button>
                 </div>
               </div>
               <p className="text-xs text-gray-500 mb-3">{acc.accountNumber || 'No account number'}</p>

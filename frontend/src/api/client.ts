@@ -10,7 +10,6 @@ interface AccountCreateRequest {
 interface AccountUpdateRequest {
   accountName: string;
   accountNumber?: string;
-  openingBalance: number;
 }
 
 const api = axios.create({
@@ -32,7 +31,7 @@ api.interceptors.response.use(
       localStorage.removeItem('token');
       localStorage.removeItem('username');
       localStorage.setItem('session_message', 'Your session has expired. Please sign in again.');
-      window.location.href = '/login';
+      window.dispatchEvent(new Event('auth:logout'));
     }
     return Promise.reject(error);
   }
@@ -50,6 +49,7 @@ export const accountApi = {
   create: (data: AccountCreateRequest) => api.post('/accounts', data),
   update: (id: number, data: AccountUpdateRequest) => api.put(`/accounts/${id}`, data),
   delete: (id: number) => api.delete(`/accounts/${id}`),
+  getBalancesAt: (asOf: string) => api.get<Record<number, { balance: number }>>('/accounts/balances', { params: { asOf } }),
 };
 
 export const transactionApi = {

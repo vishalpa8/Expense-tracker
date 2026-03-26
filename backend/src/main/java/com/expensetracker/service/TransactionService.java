@@ -4,6 +4,9 @@ import com.expensetracker.dto.TransactionRequest;
 import com.expensetracker.entity.Account;
 import com.expensetracker.entity.Transaction;
 import com.expensetracker.entity.User;
+import com.expensetracker.exception.AccessDeniedException;
+import com.expensetracker.exception.BusinessRuleException;
+import com.expensetracker.exception.ResourceNotFoundException;
 import com.expensetracker.repository.AccountRepository;
 import com.expensetracker.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +25,7 @@ public class TransactionService {
     @Transactional
     public Transaction createTransaction(User user, TransactionRequest request) {
         Account account = getOwnedAccount(user, request.getAccountId());
+        validateSufficientBalance(account, request.getType(), request.getAmount());
         Transaction transaction = new Transaction();
         transaction.setAccount(account);
         applyFields(transaction, request);
@@ -33,15 +37,27 @@ public class TransactionService {
     @Transactional
     public Transaction updateTransaction(User user, Long txnId, TransactionRequest request) {
         Transaction existing = transactionRepository.findById(txnId)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
         Account oldAccount = existing.getAccount();
         if (!oldAccount.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Access denied");
+            throw new AccessDeniedException();
         }
 
         Account newAccount = request.getAccountId().equals(oldAccount.getId())
                 ? oldAccount
                 : getOwnedAccount(user, request.getAccountId());
+
+        // If moving to a new account or increasing expense, validate balance
+        if (request.getType() == Transaction.TransactionType.EXPENSE) {
+            BigDecimal currentExpenseContribution = BigDecimal.ZERO;
+            if (existing.getType() == Transaction.TransactionType.EXPENSE && existing.getAccount().getId().equals(newAccount.getId())) {
+                currentExpenseContribution = existing.getAmount();
+            }
+            BigDecimal availableBalance = newAccount.getCurrentBalance().add(currentExpenseContribution);
+            if (request.getAmount().compareTo(availableBalance) > 0) {
+                throw new BusinessRuleException("Insufficient balance. Available: ₹" + availableBalance.toPlainString());
+            }
+        }
 
         existing.setAccount(newAccount);
         applyFields(existing, request);
@@ -57,10 +73,17 @@ public class TransactionService {
     @Transactional
     public void deleteTransaction(User user, Long txnId) {
         Transaction transaction = transactionRepository.findById(txnId)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
         Account account = transaction.getAccount();
         if (!account.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Access denied");
+            throw new AccessDeniedException();
+        }
+        // If deleting an income, check that balance won't go negative
+        if (transaction.getType() == Transaction.TransactionType.INCOME) {
+            BigDecimal balanceAfter = account.getCurrentBalance().subtract(transaction.getAmount());
+            if (balanceAfter.compareTo(BigDecimal.ZERO) < 0) {
+                throw new BusinessRuleException("Cannot delete this income. Account balance would go negative (₹" + balanceAfter.toPlainString() + ")");
+            }
         }
         transactionRepository.delete(transaction);
         recalculateBalance(account);
@@ -74,30 +97,31 @@ public class TransactionService {
         return transactionRepository.findDistinctCategoriesByUserId(userId);
     }
 
-    private void recalculateBalance(Account account) {
-        BigDecimal balance = account.getOpeningBalance();
-        List<Transaction> txns = transactionRepository.findByAccountIdOrderByTransactionDateDesc(account.getId());
-        for (Transaction t : txns) {
-            if (t.getType() == Transaction.TransactionType.INCOME) {
-                balance = balance.add(t.getAmount());
-            } else {
-                balance = balance.subtract(t.getAmount());
-            }
+    private void validateSufficientBalance(Account account, Transaction.TransactionType type, BigDecimal amount) {
+        if (type == Transaction.TransactionType.EXPENSE && amount.compareTo(account.getCurrentBalance()) > 0) {
+            throw new BusinessRuleException("Insufficient balance. Available: ₹" + account.getCurrentBalance().toPlainString());
         }
-        account.setCurrentBalance(balance);
+    }
+
+    private void recalculateBalance(Account account) {
+        BigDecimal netAmount = transactionRepository.calculateNetAmount(account.getId());
+        account.setCurrentBalance(account.getOpeningBalance().add(netAmount));
         accountRepository.save(account);
     }
 
     private Account getOwnedAccount(User user, Long accountId) {
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new RuntimeException("Account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
         if (!account.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Access denied");
+            throw new AccessDeniedException();
         }
         return account;
     }
 
     private void applyFields(Transaction t, TransactionRequest r) {
+        if (r.getTransactionDate().isAfter(LocalDateTime.now())) {
+            throw new BusinessRuleException("Transaction date cannot be in the future");
+        }
         t.setType(r.getType());
         t.setAmount(r.getAmount());
         t.setTransactionDate(r.getTransactionDate());
@@ -110,7 +134,6 @@ public class TransactionService {
 
     private String normalizeCategory(String category) {
         if (category == null || category.isBlank()) return null;
-        String trimmed = category.trim();
-        return trimmed.substring(0, 1).toUpperCase() + trimmed.substring(1).toLowerCase();
+        return category.trim();
     }
 }

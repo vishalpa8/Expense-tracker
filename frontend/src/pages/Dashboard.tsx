@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { accountApi, transactionApi } from '../api/client';
 import type { Account, Transaction } from '../types/index';
-import { format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth } from 'date-fns';
-import { LogOut, TrendingUp, TrendingDown, Wallet, ChevronLeft, ChevronRight } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth, isBefore } from 'date-fns';
+import { LogOut, TrendingUp, TrendingDown, Wallet, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { AddAccountModal, EditAccountModal } from '../components/AccountModals';
 import { AddTransactionModal, EditTransactionModal } from '../components/TransactionModals';
 import TransactionsSection from '../components/TransactionsSection';
@@ -16,7 +16,9 @@ const Dashboard: React.FC = () => {
   const { username, logout } = useAuth();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [monthBalances, setMonthBalances] = useState<Record<number, number>>({});
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [loading, setLoading] = useState(true);
 
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
@@ -27,24 +29,40 @@ const Dashboard: React.FC = () => {
   const [accountFilterId, setAccountFilterId] = useState<number | null>(null);
   const { showToast } = useToast();
 
-  useEffect(() => { loadAccounts(); }, []);
-  useEffect(() => { loadTransactions(); }, [selectedDate]);
-
-  const loadAccounts = async () => {
+  const loadAccounts = useCallback(async () => {
     try { setAccounts((await accountApi.getAll()).data); } catch (e) { showToast(getErrorMessage(e), 'error'); }
-  };
-  const loadTransactions = async () => {
+  }, [showToast]);
+
+  const loadTransactions = useCallback(async () => {
     try {
       const start = startOfMonth(selectedDate);
       const end = endOfMonth(selectedDate);
-      setTransactions((await transactionApi.getByDateRange(start.toISOString(), end.toISOString())).data);
+      const [txnRes, balRes] = await Promise.all([
+        transactionApi.getByDateRange(start.toISOString(), end.toISOString()),
+        accountApi.getBalancesAt(end.toISOString()),
+      ]);
+      setTransactions(txnRes.data);
+      const balMap: Record<number, number> = {};
+      for (const [id, val] of Object.entries(balRes.data)) {
+        balMap[Number(id)] = val.balance;
+      }
+      setMonthBalances(balMap);
     } catch (e) { showToast(getErrorMessage(e), 'error'); }
-  };
-  const refresh = () => { loadAccounts(); loadTransactions(); };
+  }, [selectedDate, showToast]);
+
+  const refresh = useCallback(async () => {
+    await Promise.all([loadAccounts(), loadTransactions()]);
+  }, [loadAccounts, loadTransactions]);
+
+  useEffect(() => {
+    setLoading(true);
+    refresh().finally(() => setLoading(false));
+  }, [refresh]);
 
   const now = new Date();
   const isCurrentMonth = isSameMonth(selectedDate, now);
-  const canGoNext = !isCurrentMonth && startOfMonth(selectedDate) < startOfMonth(now);
+  const isPastMonth = isBefore(startOfMonth(selectedDate), startOfMonth(now));
+  const canGoNext = !isCurrentMonth && isBefore(startOfMonth(selectedDate), startOfMonth(now));
 
   const handleDeleteAccount = async () => {
     if (!deletingAccount) return;
@@ -53,7 +71,7 @@ const Dashboard: React.FC = () => {
       if (accountFilterId === deletingAccount.id) setAccountFilterId(null);
       setDeletingAccount(null);
       showToast(`"${deletingAccount.accountName}" deleted successfully`, 'success');
-      refresh();
+      await refresh();
     } catch (e) { showToast(getErrorMessage(e), 'error'); setDeletingAccount(null); }
   };
   const handleDeleteTransaction = async () => {
@@ -62,7 +80,7 @@ const Dashboard: React.FC = () => {
       await transactionApi.delete(deletingTransaction.id);
       setDeletingTransaction(null);
       showToast('Transaction deleted successfully', 'success');
-      refresh();
+      await refresh();
     } catch (e) { showToast(getErrorMessage(e), 'error'); setDeletingTransaction(null); }
   };
 
@@ -71,10 +89,19 @@ const Dashboard: React.FC = () => {
     : transactions;
   const accountFilterName = accountFilterId ? accounts.find((a) => a.id === accountFilterId)?.accountName || null : null;
 
+  // Only show accounts that existed by the end of the selected month
+  const monthEnd = endOfMonth(selectedDate);
+  const visibleAccounts = accounts.filter(a => new Date(a.createdAt) <= monthEnd);
+
   const totalIncome = filteredTransactions.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
   const totalExpense = filteredTransactions.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0);
   const monthlyNet = totalIncome - totalExpense;
-  const totalBalance = accounts.reduce((s, a) => s + a.currentBalance, 0);
+  const totalBalance = visibleAccounts.reduce((s, a) => s + (monthBalances[a.id] ?? a.currentBalance), 0);
+
+  const accountsWithMonthBalance = visibleAccounts.map(a => ({
+    ...a,
+    currentBalance: monthBalances[a.id] ?? a.currentBalance,
+  }));
 
   const sanitizeCsvField = (v: string | number): string => {
     const s = String(v);
@@ -86,8 +113,9 @@ const Dashboard: React.FC = () => {
     const csv = [['Date','Type','Amount','Category','Description','From/To','Method','Details','Account'],
       ...filteredTransactions.map((t) => [format(new Date(t.transactionDate), 'dd/MM/yyyy HH:mm'), t.type, t.amount, t.category||'', t.description||'', t.senderReceiver||'', t.paymentMethod, t.paymentDetails||'', t.account.accountName]),
     ].map((r) => r.map(sanitizeCsvField).join(',')).join('\n');
+    const suffix = accountFilterName ? `-${accountFilterName.replace(/\s+/g, '_')}` : '';
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    a.download = `expense-report-${format(selectedDate, 'yyyy-MM')}.csv`; a.click();
+    a.download = `expense-report-${format(selectedDate, 'yyyy-MM')}${suffix}.csv`; a.click();
   };
 
   return (
@@ -106,7 +134,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="flex items-center gap-3 sm:gap-6">
               <div className="text-right">
-                <p className="text-xs text-gray-500">Total Balance (All Accounts)</p>
+                <p className="text-xs text-gray-500">{isCurrentMonth ? 'Total Balance (All Accounts)' : `Balance as of ${format(endOfMonth(selectedDate), 'MMM yyyy')}`}</p>
                 <p className="text-xl sm:text-2xl font-bold text-gray-900">₹{totalBalance.toFixed(2)}</p>
               </div>
               <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl border border-gray-200">
@@ -124,13 +152,13 @@ const Dashboard: React.FC = () => {
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Month Navigator — no future */}
+        {/* Month Navigator */}
         <div className="flex items-center justify-between mb-6">
           <button onClick={() => { setSelectedDate(subMonths(selectedDate, 1)); setAccountFilterId(null); }} className="cursor-pointer flex items-center gap-1 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 font-medium text-sm text-gray-700">
             <ChevronLeft size={18} /> Prev
           </button>
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900">{format(selectedDate, 'MMMM yyyy')}</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{isCurrentMonth ? format(now, 'dd MMMM yyyy') : format(selectedDate, 'MMMM yyyy')}</h2>
             <p className="text-sm text-gray-500">{isCurrentMonth ? 'Current Month' : 'Past Month'}</p>
           </div>
           {canGoNext ? (
@@ -142,41 +170,50 @@ const Dashboard: React.FC = () => {
           )}
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div><p className="text-xs font-medium text-gray-500 mb-1">Month Income</p><p className="text-2xl font-bold text-green-600">₹{totalIncome.toFixed(2)}</p></div>
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center"><TrendingUp className="text-green-600" size={24} /></div>
-            </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="animate-spin text-blue-600" size={32} />
+            <span className="ml-3 text-gray-500 font-medium">Loading...</span>
           </div>
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div><p className="text-xs font-medium text-gray-500 mb-1">Month Expenses</p><p className="text-2xl font-bold text-red-600">₹{totalExpense.toFixed(2)}</p></div>
-              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center"><TrendingDown className="text-red-600" size={24} /></div>
+        ) : (
+          <>
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div><p className="text-xs font-medium text-gray-500 mb-1">Month Income</p><p className="text-2xl font-bold text-green-600">₹{totalIncome.toFixed(2)}</p></div>
+                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center"><TrendingUp className="text-green-600" size={24} /></div>
+                </div>
+              </div>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div><p className="text-xs font-medium text-gray-500 mb-1">Month Expenses</p><p className="text-2xl font-bold text-red-600">₹{totalExpense.toFixed(2)}</p></div>
+                  <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center"><TrendingDown className="text-red-600" size={24} /></div>
+                </div>
+              </div>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div><p className="text-xs font-medium text-gray-500 mb-1">Month Net</p><p className={`text-2xl font-bold ${monthlyNet >= 0 ? 'text-green-600' : 'text-red-600'}`}>{monthlyNet >= 0 ? '+' : ''}₹{monthlyNet.toFixed(2)}</p></div>
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${monthlyNet >= 0 ? 'bg-green-100' : 'bg-red-100'}`}><Wallet className={monthlyNet >= 0 ? 'text-green-600' : 'text-red-600'} size={24} /></div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div><p className="text-xs font-medium text-gray-500 mb-1">Month Net</p><p className={`text-2xl font-bold ${monthlyNet >= 0 ? 'text-green-600' : 'text-red-600'}`}>{monthlyNet >= 0 ? '+' : ''}₹{monthlyNet.toFixed(2)}</p></div>
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${monthlyNet >= 0 ? 'bg-green-100' : 'bg-red-100'}`}><Wallet className={monthlyNet >= 0 ? 'text-green-600' : 'text-red-600'} size={24} /></div>
-            </div>
-          </div>
-        </div>
 
-        <AccountsSection accounts={accounts} totalBalance={totalBalance} activeAccountId={accountFilterId} onAdd={() => setShowAddAccount(true)} onEdit={setEditingAccount} onDelete={setDeletingAccount} onFilter={setAccountFilterId} />
+            <AccountsSection accounts={accountsWithMonthBalance} totalBalance={totalBalance} activeAccountId={accountFilterId} onAdd={() => setShowAddAccount(true)} onEdit={setEditingAccount} onDelete={setDeletingAccount} onFilter={setAccountFilterId} />
 
-        <TransactionsSection transactions={filteredTransactions} selectedDate={selectedDate} totalIncome={totalIncome} totalExpense={totalExpense} monthlyNet={monthlyNet}
-          hasAccounts={accounts.length > 0} isCurrentMonth={isCurrentMonth} isPastMonth={!isCurrentMonth}
-          accountFilter={accountFilterName} onClearAccountFilter={() => setAccountFilterId(null)}
-          onAdd={() => setShowAddTransaction(true)} onEdit={setEditingTransaction} onDelete={setDeletingTransaction} onDownload={downloadReport} />
+            <TransactionsSection transactions={filteredTransactions} selectedDate={selectedDate} totalIncome={totalIncome} totalExpense={totalExpense} monthlyNet={monthlyNet}
+              hasAccounts={visibleAccounts.length > 0} isPastMonth={isPastMonth}
+              accountFilter={accountFilterName} onClearAccountFilter={() => setAccountFilterId(null)}
+              onAdd={() => setShowAddTransaction(true)} onEdit={setEditingTransaction} onDelete={setDeletingTransaction} onDownload={downloadReport} />
+          </>
+        )}
       </div>
 
-      {showAddAccount && <AddAccountModal onClose={() => { setShowAddAccount(false); refresh(); }} />}
-      {editingAccount && <EditAccountModal account={editingAccount} onClose={() => { setEditingAccount(null); refresh(); }} />}
+      {showAddAccount && <AddAccountModal onClose={async () => { setShowAddAccount(false); await refresh(); }} />}
+      {editingAccount && <EditAccountModal account={editingAccount} onClose={async () => { setEditingAccount(null); await refresh(); }} />}
       {deletingAccount && <ConfirmModal title="Delete Account" message={`Delete "${deletingAccount.accountName}"? This cannot be undone. Accounts with transactions cannot be deleted.`} onConfirm={handleDeleteAccount} onCancel={() => setDeletingAccount(null)} />}
-      {showAddTransaction && <AddTransactionModal accounts={accounts} onClose={() => { setShowAddTransaction(false); refresh(); }} />}
-      {editingTransaction && <EditTransactionModal accounts={accounts} transaction={editingTransaction} onClose={() => { setEditingTransaction(null); refresh(); }} />}
+      {showAddTransaction && <AddTransactionModal accounts={accounts} selectedDate={selectedDate} onClose={async () => { setShowAddTransaction(false); await refresh(); }} />}
+      {editingTransaction && <EditTransactionModal accounts={accounts} transaction={editingTransaction} onClose={async () => { setEditingTransaction(null); await refresh(); }} />}
       {deletingTransaction && <ConfirmModal title="Delete Transaction" message={`Delete this ₹${deletingTransaction.amount.toFixed(2)} ${deletingTransaction.type.toLowerCase()} transaction? The account balance will be reversed.`} onConfirm={handleDeleteTransaction} onCancel={() => setDeletingTransaction(null)} />}
     </div>
   );

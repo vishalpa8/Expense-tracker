@@ -4,8 +4,7 @@ import { authApi } from '../api/client';
 import { useNavigate, Link } from 'react-router-dom';
 import { Wallet } from 'lucide-react';
 import { getErrorMessage } from '../utils/errorMessages';
-
-const IC = "w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-gray-50 hover:bg-white disabled:opacity-50";
+import { INPUT_CLASS } from '../utils/styles';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -46,12 +45,12 @@ const Login: React.FC = () => {
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Username</label>
             <input type="text" value={username} onChange={(e) => setUsername(e.target.value)}
-              className={IC} placeholder="Enter your username" required disabled={loading} autoFocus />
+              className={INPUT_CLASS} placeholder="Enter your username" required disabled={loading} autoFocus />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-              className={IC} placeholder="Enter your password" required disabled={loading} />
+              className={INPUT_CLASS} placeholder="Enter your password" required disabled={loading} />
           </div>
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2">

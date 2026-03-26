@@ -1,250 +1,174 @@
 # 💰 Expense Tracker
 
-A comprehensive, production-ready expense tracking application with authentication, detailed transaction management, and customizable reporting.
+A personal finance application for tracking income, expenses, and bank account balances with monthly reporting.
 
-![Tech Stack](https://img.shields.io/badge/Java-17-orange)
+![Java](https://img.shields.io/badge/Java-21-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-green)
-![React](https://img.shields.io/badge/React-18-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
+![React](https://img.shields.io/badge/React-19-blue)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)
 
-## ✨ Features
+## Features
 
-- 🔐 **Secure Authentication** - JWT-based login system
-- 💳 **Multiple Accounts** - Track multiple bank accounts and wallets
-- 📊 **Detailed Transactions** - Record income/expenses with full details
-- 📅 **Date & Time Tracking** - Precise transaction timestamps (dd/MM/yyyy HH:mm)
-- 💸 **Payment Methods** - Support for UPI, Card, Cash, Bank Transfer
-- 📈 **Reports** - Daily and monthly reports with CSV export
-- 🎨 **Beautiful UI** - Clean, minimal, professional design
-- 📱 **Responsive** - Works on desktop and mobile devices
+- **JWT Authentication** — register/login with secure token-based sessions (24h expiry)
+- **Multiple Accounts** — track bank accounts, wallets, UPI apps with individual balances
+- **Transaction Management** — record income/expenses with category, description, payment method
+- **Overdraft Protection** — prevents spending more than available balance
+- **Monthly Navigation** — browse past months with accurate historical balances per account
+- **Account Filtering** — click any account card to filter transactions
+- **Two View Modes** — flat table or grouped by category
+- **Sortable Columns** — sort by date, amount, category, or account
+- **CSV Export** — download monthly reports as spreadsheets
+- **Responsive Design** — works on desktop and mobile
+- **Accessible** — ARIA attributes, keyboard navigation, screen reader support
 
-## 🚀 Quick Start
+## Tech Stack
 
-### Access the Application
+| Layer | Technology |
+|-------|-----------|
+| Backend | Java 21, Spring Boot 3.2, Spring Security, Spring Data JPA |
+| Frontend | React 19, TypeScript 5.9, Vite 7, Tailwind CSS 4 |
+| Database | PostgreSQL 15 |
+| Auth | JWT (jjwt 0.12) |
+| Icons | Lucide React |
+| Dates | date-fns |
 
-**Frontend**: [http://localhost:5173](http://localhost:5173)  
-**Backend API**: [http://localhost:8080](http://localhost:8080)
+## Quick Start
 
-**Default Login**:
-- Username: `admin`
-- Password: `admin123`
+### Prerequisites
+- Java 21+
+- Node.js 18+
+- PostgreSQL 15+
 
-### Services Status
+### Database Setup
+```bash
+# Create the database
+createdb expense_tracker
 
-All services are currently running:
-- ✅ PostgreSQL (port 5432)
-- ✅ Backend API (port 8080)
-- ✅ Frontend (port 5173)
-
-## 📖 Documentation
-
-- **[Setup Guide](docs/SETUP_GUIDE.md)** - Installation and configuration
-- **[API Documentation](docs/API_DOCUMENTATION.md)** - REST API reference
-- **[Progress Tracker](docs/PROGRESS.md)** - Development status and roadmap
-- **[Project Overview](docs/PROJECT_OVERVIEW.md)** - Architecture and design
-
-## 🏗️ Architecture
-
+# Or via psql
+psql -c "CREATE DATABASE expense_tracker;"
 ```
-┌─────────────┐      ┌──────────────┐      ┌──────────────┐
-│   React     │─────▶│  Spring Boot │─────▶│  PostgreSQL  │
-│  Frontend   │◀─────│   Backend    │◀─────│   Database   │
-│  (Port 5173)│ JWT  │  (Port 8080) │ JPA  │  (Port 5432) │
-└─────────────┘      └──────────────┘      └──────────────┘
-```
-
-## 🛠️ Tech Stack
 
 ### Backend
-- **Java 17** - Programming language
-- **Spring Boot 3.2** - Application framework
-- **Spring Security** - Authentication & authorization
-- **Spring Data JPA** - Data persistence
-- **PostgreSQL 15** - Database
-- **JWT** - Token-based authentication
-- **Maven** - Build tool
-- **Docker** - Containerization
+```bash
+cd backend
+
+# Run with Maven (dev mode)
+./mvnw spring-boot:run
+
+# Or build and run JAR (recommended — uses less memory)
+./mvnw clean package -DskipTests
+java -jar target/expense-tracker-1.0.0.jar
+```
+Backend starts on `http://localhost:8080`
 
 ### Frontend
-- **React 18** - UI library
-- **TypeScript** - Type-safe JavaScript
-- **Vite** - Build tool
-- **Tailwind CSS** - Styling
-- **React Router** - Navigation
-- **Axios** - HTTP client
-- **TanStack Query** - Data fetching
-- **date-fns** - Date utilities
-- **Lucide React** - Icons
-
-## 📱 Screenshots
-
-### Login Page
-Clean and secure authentication interface with default credentials displayed.
-
-### Dashboard
-- **Summary Cards**: Total balance, income, and expenses at a glance
-- **Transaction Table**: Detailed view of all transactions with filters
-- **Account Overview**: All accounts with current balances
-- **Period Selection**: Switch between daily and monthly views
-- **Export**: Download reports as CSV
-
-### Add Transaction
-Comprehensive form with:
-- Account selection
-- Income/Expense type
-- Amount and date/time
-- Category and description
-- Sender/Receiver information
-- Payment method and details
-
-## 🔐 Security
-
-- ✅ Password hashing with BCrypt
-- ✅ JWT token authentication
-- ✅ Protected API endpoints
-- ✅ CORS configuration
-- ✅ Secure session management
-- ✅ Input validation
-
-## 📊 Database Schema
-
-### Tables
-1. **users** - User authentication and profile
-2. **accounts** - Bank accounts with balances
-3. **transactions** - All financial transactions
-
-### Relationships
-- User → Accounts (One-to-Many)
-- Account → Transactions (One-to-Many)
-
-## 🎯 Use Cases
-
-1. **Personal Finance Management**
-   - Track daily expenses
-   - Monitor income sources
-   - Manage multiple accounts
-
-2. **Budget Planning**
-   - Review monthly spending
-   - Identify expense categories
-   - Download reports for analysis
-
-3. **Financial Reporting**
-   - Generate period-based reports
-   - Export data for tax purposes
-   - Track payment methods
-
-## 🔄 Workflow
-
-1. **Login** with your credentials
-2. **Add Accounts** (e.g., "Main Bank", "Cash Wallet")
-3. **Record Transactions**:
-   - Select account
-   - Choose income/expense
-   - Enter amount, date, and details
-   - Specify payment method
-4. **View Reports**:
-   - Select daily or monthly view
-   - Choose date range
-   - Review transaction history
-   - Download CSV report
-
-## 🚦 API Endpoints
-
-### Authentication
-- `POST /api/auth/login` - User login
-
-### Accounts
-- `GET /api/accounts` - Get all accounts
-- `POST /api/accounts` - Create account
-
-### Transactions
-- `GET /api/transactions` - Get transactions by date range
-- `POST /api/transactions` - Create transaction
-
-See [API Documentation](docs/API_DOCUMENTATION.md) for details.
-
-## 🧪 Testing
-
-### Manual Testing
-1. Login with default credentials
-2. Create a new account
-3. Add income transaction
-4. Add expense transaction
-5. View daily report
-6. View monthly report
-7. Download CSV report
-
-### API Testing
-Use cURL, Postman, or HTTPie to test endpoints. See [API Documentation](docs/API_DOCUMENTATION.md).
-
-## 📝 Management
-
-### View Logs
 ```bash
-# Backend
-tail -f /workspace/expense-tracker/backend/backend.log
-
-# Frontend
-tail -f /workspace/expense-tracker/frontend/frontend.log
-```
-
-### Restart Services
-```bash
-# Backend
-docker restart expense-backend
-
-# Frontend (if needed)
-cd /workspace/expense-tracker/frontend
+cd frontend
+npm install
 npm run dev
 ```
+Frontend starts on `http://localhost:5173`
 
-### Stop Services
+### Configuration
+
+Backend config is in `backend/src/main/resources/`:
+- `application.properties` — base config (active profile, JWT expiry, port)
+- `application-dev.properties` — dev database, JWT secret, CORS origins
+- `application-prod.properties` — production config using environment variables
+
+DB credentials default to `admin/admin123` in dev. Override with env vars:
 ```bash
-docker stop expense-backend expense-tracker-db
+export DB_URL=jdbc:postgresql://localhost:5432/expense_tracker
+export DB_USERNAME=your_user
+export DB_PASSWORD=your_password
 ```
 
-## 🔮 Future Enhancements
+## Project Structure
 
-- [ ] Charts and visualizations
-- [ ] Budget planning module
-- [ ] Recurring transactions
-- [ ] Multi-currency support
-- [ ] Mobile application
-- [ ] Email notifications
-- [ ] Advanced analytics
-- [ ] Receipt attachments
+```
+├── backend/
+│   └── src/main/java/com/expensetracker/
+│       ├── config/          # Security, CORS, global exception handler
+│       ├── controller/      # REST endpoints (Auth, Account, Transaction)
+│       ├── dto/             # Request/response DTOs with validation
+│       ├── entity/          # JPA entities (User, Account, Transaction)
+│       ├── exception/       # Custom exceptions (typed, not generic RuntimeException)
+│       ├── repository/      # Spring Data JPA repositories
+│       ├── security/        # JWT utility and auth filter
+│       └── service/         # Business logic with balance validation
+├── frontend/
+│   └── src/
+│       ├── api/             # Axios client with interceptors
+│       ├── components/      # Reusable UI (modals, sections, wrappers)
+│       ├── context/         # Auth and Toast providers
+│       ├── pages/           # Login, Register, Dashboard
+│       ├── types/           # TypeScript interfaces
+│       └── utils/           # Error messages, shared styles
+└── docs/                    # API docs, setup guide, progress tracker
+```
 
-## 🤝 Contributing
+## API Endpoints
 
-This is a personal project. For suggestions or improvements:
-1. Review the codebase
-2. Check [PROGRESS.md](docs/PROGRESS.md) for planned features
-3. Implement changes following existing patterns
-4. Test thoroughly before deployment
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Register new user |
+| POST | `/api/auth/login` | Login, returns JWT |
+| GET | `/api/accounts` | List user's accounts |
+| GET | `/api/accounts/balances?asOf=` | Account balances at a point in time |
+| POST | `/api/accounts` | Create account |
+| PUT | `/api/accounts/:id` | Update account name/number |
+| DELETE | `/api/accounts/:id` | Delete account (no transactions) |
+| GET | `/api/transactions?start=&end=` | Transactions in date range |
+| GET | `/api/transactions/categories` | User's distinct categories |
+| POST | `/api/transactions` | Create transaction |
+| PUT | `/api/transactions/:id` | Update transaction |
+| DELETE | `/api/transactions/:id` | Delete transaction |
 
-## 📄 License
+See [API Documentation](docs/API_DOCUMENTATION.md) for full details.
 
-This project is for personal use. Modify as needed for your requirements.
+## Business Rules
 
-## 🙏 Acknowledgments
+- Expenses cannot exceed account balance (overdraft protection)
+- Deleting income is blocked if it would make balance negative
+- Transaction dates cannot be in the future
+- Account names must be unique per user
+- Accounts with transactions cannot be deleted
+- Balances are recalculated via SQL SUM (not iterating all transactions)
+- Past months show historical balances, not current balance
+- Accounts only appear in months after their creation date
 
-Built with modern best practices:
-- Clean architecture
-- RESTful API design
-- Type-safe implementation
-- Responsive design
-- Comprehensive documentation
+## Database Schema
 
-## 📞 Support
+```
+users (id, username, password, full_name, created_at)
+  └── accounts (id, user_id, account_name, account_number, opening_balance, current_balance, version, created_at)
+        └── transactions (id, account_id, type, amount, transaction_date, category, description, sender_receiver, payment_method, payment_details, created_at)
+```
 
-For issues or questions:
-1. Check documentation in `/docs` folder
-2. Review log files for errors
-3. Verify all services are running
-4. Check database connectivity
+Indexes on `accounts.user_id`, `transactions.account_id`, `transactions.transaction_date`.
+Unique constraint on `(user_id, account_name)`.
+Optimistic locking via `@Version` on accounts.
 
----
+## Error Handling
 
-**Built with ❤️ using Java, Spring Boot, React, and TypeScript**
+Backend uses typed exceptions (not generic RuntimeException):
+- `ResourceNotFoundException` → 404
+- `AccessDeniedException` → 403
+- `InvalidCredentialsException` → 401
+- `DuplicateResourceException` → 409
+- `BusinessRuleException` → 400
+- `OptimisticLockException` → 409
+- Unexpected errors → 500 (logged, no stack trace exposed)
+
+Frontend maps all backend errors to user-friendly messages.
+
+## Documentation
+
+- [API Documentation](docs/API_DOCUMENTATION.md) — full REST API reference
+- [User Guide](FEATURES.md) — how to use the application
+- [Progress](docs/PROGRESS.md) — what's done and what's planned
+
+## License
+
+Personal project. Modify as needed.

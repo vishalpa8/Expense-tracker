@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'info';
@@ -15,13 +15,12 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
-let nextId = 0;
-
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const nextId = useRef(0);
 
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
-    const id = nextId++;
+    const id = nextId.current++;
     setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   }, []);
@@ -42,12 +41,12 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm" role="status" aria-live="polite">
         {toasts.map((toast) => (
           <div key={toast.id} className={`flex items-start gap-3 px-4 py-3 rounded-xl border shadow-lg animate-in ${styles[toast.type]}`}>
             {icons[toast.type]}
             <p className="text-sm font-medium flex-1">{toast.message}</p>
-            <button onClick={() => dismiss(toast.id)} className="shrink-0 opacity-60 hover:opacity-100">
+            <button onClick={() => dismiss(toast.id)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss notification">
               <X size={16} />
             </button>
           </div>

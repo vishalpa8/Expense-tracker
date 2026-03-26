@@ -13,7 +13,6 @@ interface Props {
   totalExpense: number;
   monthlyNet: number;
   hasAccounts: boolean;
-  isCurrentMonth: boolean;
   isPastMonth: boolean;
   accountFilter: string | null;
   onClearAccountFilter: () => void;
@@ -29,7 +28,7 @@ function groupBy<T>(arr: T[], keyFn: (item: T) => string): Record<string, T[]> {
   return m;
 }
 
-const TransactionsSection: React.FC<Props> = ({ transactions, selectedDate, totalIncome, totalExpense, monthlyNet, hasAccounts, isCurrentMonth, isPastMonth, accountFilter, onClearAccountFilter, onAdd, onEdit, onDelete, onDownload }) => {
+const TransactionsSection: React.FC<Props> = ({ transactions, selectedDate, totalIncome, totalExpense, monthlyNet, hasAccounts, isPastMonth, accountFilter, onClearAccountFilter, onAdd, onEdit, onDelete, onDownload }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('all');
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortAsc, setSortAsc] = useState(false);
@@ -76,7 +75,7 @@ const TransactionsSection: React.FC<Props> = ({ transactions, selectedDate, tota
           <h2 className="text-xl font-bold text-gray-900">Transactions</h2>
           <p className="text-sm text-gray-500">
             {format(selectedDate, 'MMMM yyyy')} — {txnCount} transaction{txnCount !== 1 ? 's' : ''}
-            {isPastMonth && <span className="ml-2 text-amber-500 font-medium">· Past (delete disabled)</span>}
+            {isPastMonth && <span className="ml-2 text-amber-500 font-medium">· Past month</span>}
           </p>
         </div>
         <div className="flex gap-2">
@@ -141,7 +140,7 @@ const TransactionsSection: React.FC<Props> = ({ transactions, selectedDate, tota
                     </button>
                     {isOpen && (
                       <div className="divide-y divide-gray-50">
-                        {txns.map((t) => <TxnRow key={t.id} t={t} isCurrentMonth={isCurrentMonth} onEdit={onEdit} onDelete={onDelete} />)}
+                        {txns.map((t) => <TxnRow key={t.id} t={t} onEdit={onEdit} onDelete={onDelete} />)}
                       </div>
                     )}
                   </div>
@@ -178,7 +177,7 @@ const TransactionsSection: React.FC<Props> = ({ transactions, selectedDate, tota
                       <td className="px-3 py-3 text-gray-600">{t.senderReceiver || '-'}</td>
                       <td className="px-3 py-3"><span className="inline-flex px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700">{t.paymentMethod.replace('_', ' ')}</span></td>
                       <td className="px-3 py-3 text-gray-600 font-medium">{t.account.accountName}</td>
-                      <td className="px-3 py-3"><Actions t={t} isCurrentMonth={isCurrentMonth} onEdit={onEdit} onDelete={onDelete} /></td>
+                      <td className="px-3 py-3"><Actions t={t} onEdit={onEdit} onDelete={onDelete} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -209,14 +208,14 @@ const CatBadge: React.FC<{ cat: string }> = ({ cat }) => (
   <span className="inline-flex px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">{cat}</span>
 );
 
-const Actions: React.FC<{ t: Transaction; isCurrentMonth: boolean; onEdit: (t: Transaction) => void; onDelete: (t: Transaction) => void }> = ({ t, isCurrentMonth, onEdit, onDelete }) => (
-  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-    <button onClick={() => onEdit(t)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit"><Pencil size={14} /></button>
-    {isCurrentMonth && <button onClick={() => onDelete(t)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Delete"><Trash2 size={14} /></button>}
+const Actions: React.FC<{ t: Transaction; onEdit: (t: Transaction) => void; onDelete: (t: Transaction) => void }> = ({ t, onEdit, onDelete }) => (
+  <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+    <button onClick={() => onEdit(t)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit" aria-label="Edit transaction"><Pencil size={14} /></button>
+    <button onClick={() => onDelete(t)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Delete" aria-label="Delete transaction"><Trash2 size={14} /></button>
   </div>
 );
 
-const TxnRow: React.FC<{ t: Transaction; isCurrentMonth: boolean; onEdit: (t: Transaction) => void; onDelete: (t: Transaction) => void }> = ({ t, isCurrentMonth, onEdit, onDelete }) => (
+const TxnRow: React.FC<{ t: Transaction; onEdit: (t: Transaction) => void; onDelete: (t: Transaction) => void }> = ({ t, onEdit, onDelete }) => (
   <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 group">
     <div className="w-16 text-xs text-gray-500 shrink-0">{format(new Date(t.transactionDate), 'dd MMM')}</div>
     <TypeBadge type={t.type} />
@@ -231,9 +230,9 @@ const TxnRow: React.FC<{ t: Transaction; isCurrentMonth: boolean; onEdit: (t: Tr
         <span>· {t.account.accountName}</span>
       </div>
     </div>
-    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-      <button onClick={() => onEdit(t)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil size={14} /></button>
-      {isCurrentMonth && <button onClick={() => onDelete(t)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={14} /></button>}
+    <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+      <button onClick={() => onEdit(t)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" aria-label="Edit transaction"><Pencil size={14} /></button>
+      <button onClick={() => onDelete(t)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg" aria-label="Delete transaction"><Trash2 size={14} /></button>
     </div>
   </div>
 );

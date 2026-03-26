@@ -1,50 +1,79 @@
 package com.expensetracker.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
-@Table(name = "transactions")
-@Data
+@Table(name = "transactions", indexes = {
+    @Index(name = "idx_txn_account_id", columnList = "account_id"),
+    @Index(name = "idx_txn_date", columnList = "transaction_date")
+})
+@Getter
+@Setter
 public class Transaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @ManyToOne
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Account account;
-    
+
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private TransactionType type;
-    
+
     @Column(nullable = false)
     private BigDecimal amount;
-    
-    @Column(nullable = false)
+
+    @Column(name = "transaction_date", nullable = false)
     private LocalDateTime transactionDate;
-    
+
+    @Column(length = 100)
     private String category;
+
+    @Column(length = 500)
     private String description;
+
+    @Column(length = 200)
     private String senderReceiver;
-    
+
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod;
-    
+
+    @Column(length = 200)
     private String paymentDetails;
-    
-    @Column(nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
-    
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
     public enum TransactionType {
         INCOME, EXPENSE
     }
-    
+
     public enum PaymentMethod {
         UPI, CARD, CASH, BANK_TRANSFER, OTHER
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Transaction that = (Transaction) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
     }
 }
