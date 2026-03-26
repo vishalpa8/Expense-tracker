@@ -3,6 +3,7 @@ package com.expensetracker.service;
 import com.expensetracker.dto.AuthResponse;
 import com.expensetracker.dto.LoginRequest;
 import com.expensetracker.dto.RegisterRequest;
+import com.expensetracker.entity.Account;
 import com.expensetracker.entity.User;
 import com.expensetracker.exception.DuplicateResourceException;
 import com.expensetracker.exception.InvalidCredentialsException;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -56,7 +58,10 @@ public class AuthService {
     @Transactional
     public void deleteUser(String username) {
         User user = getCurrentUser(username);
-        transactionRepository.deleteAllByUserId(user.getId());
+        List<Account> accounts = accountRepository.findByUserId(user.getId());
+        for (Account account : accounts) {
+            transactionRepository.deleteAllByAccountId(account.getId());
+        }
         accountRepository.deleteAllByUserId(user.getId());
         userRepository.delete(user);
     }

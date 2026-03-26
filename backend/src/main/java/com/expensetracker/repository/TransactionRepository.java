@@ -15,9 +15,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     boolean existsByAccountId(Long accountId);
 
-    @Query("DELETE FROM Transaction t WHERE t.account.user.id = :userId")
-    @org.springframework.data.jpa.repository.Modifying
-    void deleteAllByUserId(Long userId);
+    void deleteAllByAccountId(Long accountId);
 
     @Query("SELECT DISTINCT t.category FROM Transaction t WHERE t.account.user.id = :userId AND t.category IS NOT NULL ORDER BY t.category")
     List<String> findDistinctCategoriesByUserId(Long userId);
