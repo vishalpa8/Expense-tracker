@@ -37,7 +37,7 @@ public class AuthService {
         user.setFullName(request.getFullName().trim());
         userRepository.save(user);
         String token = jwtUtil.generateToken(user.getUsername());
-        return new AuthResponse(token, user.getUsername());
+        return new AuthResponse(token, user.getUsername(), user.getFullName());
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -47,7 +47,7 @@ public class AuthService {
             throw new InvalidCredentialsException();
         }
         String token = jwtUtil.generateToken(user.getUsername());
-        return new AuthResponse(token, user.getUsername());
+        return new AuthResponse(token, user.getUsername(), user.getFullName());
     }
 
     public User getCurrentUser(String username) {

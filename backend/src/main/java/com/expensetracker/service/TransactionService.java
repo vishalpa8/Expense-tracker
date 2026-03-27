@@ -26,6 +26,10 @@ public class TransactionService {
     @Transactional
     public Transaction createTransaction(User user, TransactionRequest request) {
         Account account = getOwnedAccount(user, request.getAccountId());
+        LocalDateTime accountStart = account.getCreatedAt().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        if (request.getTransactionDate().isBefore(accountStart)) {
+            throw new BusinessRuleException("Transaction date cannot be before account creation month");
+        }
         validateSufficientBalance(account, request.getType(), request.getAmount());
         Transaction transaction = new Transaction();
         transaction.setAccount(account);
@@ -47,6 +51,10 @@ public class TransactionService {
         Account newAccount = request.getAccountId().equals(oldAccount.getId())
                 ? oldAccount
                 : getOwnedAccount(user, request.getAccountId());
+
+        if (request.getTransactionDate().isBefore(newAccount.getCreatedAt().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0))) {
+            throw new BusinessRuleException("Transaction date cannot be before account creation month");
+        }
 
         if (request.getType() == Transaction.TransactionType.EXPENSE) {
             BigDecimal currentExpenseContribution = BigDecimal.ZERO;
@@ -106,7 +114,15 @@ public class TransactionService {
 
     private void recalculateBalance(Account account) {
         BigDecimal netAmount = transactionRepository.calculateNetAmount(account.getId());
-        account.setCurrentBalance(account.getOpeningBalance().add(netAmount));
+        BigDecimal carry = BigDecimal.ZERO;
+        if (account.getBalanceCarries() != null && !account.getBalanceCarries().isEmpty()) {
+            try {
+                var carries = new com.fasterxml.jackson.databind.ObjectMapper().readValue(
+                    account.getBalanceCarries(), new com.fasterxml.jackson.core.type.TypeReference<java.util.List<java.util.Map<String, String>>>() {});
+                for (var c : carries) carry = carry.add(new BigDecimal(c.get("amount")));
+            } catch (Exception ignored) {}
+        }
+        account.setCurrentBalance(account.getOpeningBalance().add(carry).add(netAmount));
         accountRepository.save(account);
     }
 

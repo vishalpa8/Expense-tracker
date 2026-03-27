@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { transactionApi } from '../api/client';
 import type { Account, Transaction } from '../types/index';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import ModalWrapper from './ModalWrapper';
 import { getErrorMessage } from '../utils/errorMessages';
 import { INPUT_CLASS } from '../utils/styles';
@@ -12,9 +12,13 @@ type FormData = {
   paymentMethod: 'UPI' | 'CARD' | 'CASH' | 'BANK_TRANSFER' | 'OTHER'; paymentDetails: string;
 };
 
-const TransactionForm: React.FC<{ accounts: Account[]; formData: FormData; setFormData: React.Dispatch<React.SetStateAction<FormData>>; onSubmit: (e: React.FormEvent) => void; onClose: () => void; submitLabel: string; loading: boolean; error: string }> = ({ accounts, formData, setFormData, onSubmit, onClose, submitLabel, loading, error }) => {
+const TransactionForm: React.FC<{ accounts: Account[]; formData: FormData; setFormData: React.Dispatch<React.SetStateAction<FormData>>; onSubmit: (e: React.FormEvent) => void; onClose: () => void; submitLabel: string; loading: boolean; error: string; selectedDate: Date }> = ({ accounts, formData, setFormData, onSubmit, onClose, submitLabel, loading, error, selectedDate }) => {
   const [categories, setCategories] = useState<string[]>([]);
   useEffect(() => { transactionApi.getCategories().then((r) => setCategories(r.data)).catch(() => {}); }, []);
+
+  const now = new Date();
+  const monthStart = format(startOfMonth(selectedDate), "yyyy-MM-dd'T'HH:mm");
+  const monthEnd = endOfMonth(selectedDate) > now ? format(now, "yyyy-MM-dd'T'HH:mm") : format(endOfMonth(selectedDate), "yyyy-MM-dd'T'HH:mm");
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
@@ -44,7 +48,7 @@ const TransactionForm: React.FC<{ accounts: Account[]; formData: FormData; setFo
         </div>
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Date & Time</label>
-          <input type="datetime-local" value={formData.transactionDate} onChange={(e) => setFormData({ ...formData, transactionDate: e.target.value })} className={INPUT_CLASS} required disabled={loading} max={format(new Date(), "yyyy-MM-dd'T'HH:mm")} />
+          <input type="datetime-local" value={formData.transactionDate} onChange={(e) => setFormData({ ...formData, transactionDate: e.target.value })} className={INPUT_CLASS} required disabled={loading} min={monthStart} max={monthEnd} />
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -85,7 +89,7 @@ const TransactionForm: React.FC<{ accounts: Account[]; formData: FormData; setFo
   );
 };
 
-export const AddTransactionModal: React.FC<{ accounts: Account[]; selectedDate: Date; onClose: () => void }> = ({ accounts, selectedDate, onClose }) => {
+export const AddTransactionModal: React.FC<{ accounts: Account[]; selectedDate: Date; onClose: () => void; onSuccess: () => void }> = ({ accounts, selectedDate, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const now = new Date();
@@ -99,18 +103,21 @@ export const AddTransactionModal: React.FC<{ accounts: Account[]; selectedDate: 
   });
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); if (loading) return; setLoading(true); setError('');
-    try { await transactionApi.create({ ...formData, amount: parseFloat(formData.amount) || 0, transactionDate: formData.transactionDate + ':00' }); onClose(); }
-    catch (err) { setError(getErrorMessage(err)); setLoading(false); }
+    try {
+      await transactionApi.create({ ...formData, amount: parseFloat(formData.amount) || 0, transactionDate: formData.transactionDate + ':00' });
+      onClose();
+      onSuccess();
+    } catch (err) { setError(getErrorMessage(err)); setLoading(false); }
   };
   return (
     <ModalWrapper onClose={onClose} wide title="Add New Transaction">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Add New Transaction</h2>
-      <TransactionForm accounts={accounts} formData={formData} setFormData={setFormData} onSubmit={handleSubmit} onClose={onClose} submitLabel="Add Transaction" loading={loading} error={error} />
+      <TransactionForm accounts={accounts} formData={formData} setFormData={setFormData} onSubmit={handleSubmit} onClose={onClose} submitLabel="Add Transaction" loading={loading} error={error} selectedDate={selectedDate} />
     </ModalWrapper>
   );
 };
 
-export const EditTransactionModal: React.FC<{ accounts: Account[]; transaction: Transaction; onClose: () => void }> = ({ accounts, transaction, onClose }) => {
+export const EditTransactionModal: React.FC<{ accounts: Account[]; transaction: Transaction; onClose: () => void; onSuccess: () => void; selectedDate: Date }> = ({ accounts, transaction, onClose, onSuccess, selectedDate }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState<FormData>({
@@ -121,13 +128,16 @@ export const EditTransactionModal: React.FC<{ accounts: Account[]; transaction: 
   });
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); if (loading) return; setLoading(true); setError('');
-    try { await transactionApi.update(transaction.id, { ...formData, amount: parseFloat(formData.amount) || 0, transactionDate: formData.transactionDate + ':00' }); onClose(); }
-    catch (err) { setError(getErrorMessage(err)); setLoading(false); }
+    try {
+      await transactionApi.update(transaction.id, { ...formData, amount: parseFloat(formData.amount) || 0, transactionDate: formData.transactionDate + ':00' });
+      onClose();
+      onSuccess();
+    } catch (err) { setError(getErrorMessage(err)); setLoading(false); }
   };
   return (
     <ModalWrapper onClose={onClose} wide title="Edit Transaction">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Edit Transaction</h2>
-      <TransactionForm accounts={accounts} formData={formData} setFormData={setFormData} onSubmit={handleSubmit} onClose={onClose} submitLabel="Save Changes" loading={loading} error={error} />
+      <TransactionForm accounts={accounts} formData={formData} setFormData={setFormData} onSubmit={handleSubmit} onClose={onClose} submitLabel="Save Changes" loading={loading} error={error} selectedDate={selectedDate} />
     </ModalWrapper>
   );
 };

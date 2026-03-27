@@ -5,11 +5,14 @@ interface AccountCreateRequest {
   accountName: string;
   accountNumber?: string;
   openingBalance: number;
+  createdAt?: string;
 }
 
 interface AccountUpdateRequest {
   accountName: string;
   accountNumber?: string;
+  createdAt?: string;
+  openingBalance?: number;
 }
 
 const api = axios.create({

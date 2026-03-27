@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -41,9 +40,16 @@ public class Account {
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal currentBalance = BigDecimal.ZERO;
 
-    @CreationTimestamp
-    @Column(nullable = false, updatable = false)
+    @Column(columnDefinition = "TEXT")
+    private String balanceCarries;
+
+    @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) createdAt = LocalDateTime.now();
+    }
 
     @Override
     public boolean equals(Object o) {

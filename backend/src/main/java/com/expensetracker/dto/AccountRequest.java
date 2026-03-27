@@ -3,6 +3,7 @@ package com.expensetracker.dto;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 public class AccountRequest {
@@ -16,4 +17,6 @@ public class AccountRequest {
     @DecimalMax(value = "99999999.99", message = "Balance cannot exceed ₹99,999,999.99")
     @Digits(integer = 8, fraction = 2, message = "Balance must have at most 2 decimal places")
     private BigDecimal openingBalance;
+
+    private LocalDateTime createdAt;
 }

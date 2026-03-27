@@ -3,7 +3,8 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 interface AuthContextType {
   isAuthenticated: boolean;
   username: string | null;
-  login: (token: string, username: string) => void;
+  fullName: string | null;
+  login: (token: string, username: string, fullName: string) => void;
   logout: () => void;
 }
 
@@ -24,23 +25,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [username, setUsername] = useState<string | null>(() =>
     isTokenValid(localStorage.getItem('token')) ? localStorage.getItem('username') : null
   );
+  const [fullName, setFullName] = useState<string | null>(() =>
+    isTokenValid(localStorage.getItem('token')) ? localStorage.getItem('fullName') : null
+  );
 
-  const login = useCallback((token: string, username: string) => {
+  const login = useCallback((token: string, username: string, fullName: string) => {
     localStorage.setItem('token', token);
     localStorage.setItem('username', username);
+    localStorage.setItem('fullName', fullName);
     setIsAuthenticated(true);
     setUsername(username);
+    setFullName(fullName);
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
+    localStorage.removeItem('fullName');
     setIsAuthenticated(false);
     setUsername(null);
+    setFullName(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, username, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, username, fullName, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

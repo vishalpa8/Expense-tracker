@@ -21,7 +21,7 @@ const Register: React.FC = () => {
     setLoading(true); setError('');
     try {
       const response = await authApi.register(username, password, fullName);
-      login(response.data.token, response.data.username);
+      login(response.data.token, response.data.username, response.data.fullName);
       navigate('/dashboard');
     } catch (err) {
       setError(getErrorMessage(err));

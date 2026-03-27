@@ -13,11 +13,18 @@ import { useToast } from '../context/ToastContext';
 import { getErrorMessage } from '../utils/errorMessages';
 
 const Dashboard: React.FC = () => {
-  const { username, logout } = useAuth();
+  const { username, fullName, logout } = useAuth();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [monthBalances, setMonthBalances] = useState<Record<number, number>>({});
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const saved = sessionStorage.getItem('selectedMonth');
+    return saved ? new Date(saved) : new Date();
+  });
+  const updateSelectedDate = (date: Date) => {
+    sessionStorage.setItem('selectedMonth', date.toISOString());
+    setSelectedDate(date);
+  };
   const [loading, setLoading] = useState(true);
 
   const [showAddAccount, setShowAddAccount] = useState(false);
@@ -148,9 +155,9 @@ const Dashboard: React.FC = () => {
               </div>
               <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl border border-gray-200">
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-sm font-semibold">
-                  {username?.charAt(0).toUpperCase() || 'U'}
+                  {fullName?.charAt(0).toUpperCase() || 'U'}
                 </div>
-                <span className="text-sm font-medium text-gray-700">{username}</span>
+                <span className="text-sm font-medium text-gray-700">{fullName?.split(' ')[0] || username}</span>
               </div>
               <button onClick={logout} className="cursor-pointer flex items-center gap-1 px-3 py-2 text-red-600 hover:bg-red-50 rounded-xl font-medium text-sm">
                 <LogOut size={16} /><span className="hidden sm:inline">Logout</span>
@@ -166,15 +173,15 @@ const Dashboard: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Month Navigator */}
         <div className="flex items-center justify-between mb-6">
-          <button onClick={() => { setSelectedDate(subMonths(selectedDate, 1)); setAccountFilterId(null); }} className="cursor-pointer flex items-center gap-1 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 font-medium text-sm text-gray-700">
+          <button onClick={() => { updateSelectedDate(subMonths(selectedDate, 1)); setAccountFilterId(null); }} className="cursor-pointer flex items-center gap-1 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 font-medium text-sm text-gray-700">
             <ChevronLeft size={18} /> Prev
           </button>
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900">{isCurrentMonth ? format(now, 'dd MMMM yyyy') : format(selectedDate, 'MMMM yyyy')}</h2>
-            <p className="text-sm text-gray-500">{isCurrentMonth ? 'Current Month' : 'Past Month'}</p>
+            <p className="text-sm text-gray-500">{isCurrentMonth ? 'Current Month' : <button onClick={() => { updateSelectedDate(new Date()); setAccountFilterId(null); }} className="cursor-pointer text-blue-600 hover:text-blue-800 font-medium">↩ Go to Current Month</button>}</p>
           </div>
           {canGoNext ? (
-            <button onClick={() => { setSelectedDate(addMonths(selectedDate, 1)); setAccountFilterId(null); }} className="cursor-pointer flex items-center gap-1 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 font-medium text-sm text-gray-700">
+            <button onClick={() => { updateSelectedDate(addMonths(selectedDate, 1)); setAccountFilterId(null); }} className="cursor-pointer flex items-center gap-1 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 font-medium text-sm text-gray-700">
               Next <ChevronRight size={18} />
             </button>
           ) : (
@@ -221,13 +228,13 @@ const Dashboard: React.FC = () => {
         )}
       </div>
 
-      {showAddAccount && <AddAccountModal onClose={async () => { setShowAddAccount(false); await refresh(); }} />}
-      {editingAccount && <EditAccountModal account={editingAccount} onClose={async () => { setEditingAccount(null); await refresh(); }} />}
+      {showAddAccount && <AddAccountModal onClose={() => setShowAddAccount(false)} onSuccess={refresh} selectedDate={selectedDate} />}
+      {editingAccount && <EditAccountModal account={editingAccount} onClose={() => setEditingAccount(null)} onSuccess={refresh} selectedDate={selectedDate} />}
       {deletingAccount && <ConfirmModal title="Delete Account" message={`Delete "${deletingAccount.accountName}"? This cannot be undone. Accounts with transactions cannot be deleted.`} onConfirm={handleDeleteAccount} onCancel={() => setDeletingAccount(null)} />}
-      {showAddTransaction && <AddTransactionModal accounts={accounts} selectedDate={selectedDate} onClose={async () => { setShowAddTransaction(false); await refresh(); }} />}
-      {editingTransaction && <EditTransactionModal accounts={accounts} transaction={editingTransaction} onClose={async () => { setEditingTransaction(null); await refresh(); }} />}
+      {showAddTransaction && <AddTransactionModal accounts={accountsWithMonthBalance} selectedDate={selectedDate} onClose={() => setShowAddTransaction(false)} onSuccess={refresh} />}
+      {editingTransaction && <EditTransactionModal accounts={accountsWithMonthBalance} transaction={editingTransaction} onClose={() => setEditingTransaction(null)} onSuccess={refresh} selectedDate={selectedDate} />}
       {deletingTransaction && <ConfirmModal title="Delete Transaction" message={`Delete this ₹${deletingTransaction.amount.toFixed(2)} ${deletingTransaction.type.toLowerCase()} transaction? The account balance will be reversed.`} onConfirm={handleDeleteTransaction} onCancel={() => setDeletingTransaction(null)} />}
-      {showDeleteUser && <ConfirmModal title="Delete Your Account" message="This will permanently delete your user account, all bank accounts, and all transactions. This cannot be undone." onConfirm={handleDeleteUser} onCancel={() => setShowDeleteUser(false)} />}
+      {showDeleteUser && <ConfirmModal title="Delete Your Account" message="This will permanently delete your user account, all bank accounts, and all transactions. This cannot be undone." confirmText={username || ''} onConfirm={handleDeleteUser} onCancel={() => setShowDeleteUser(false)} />}
     </div>
   );
 };
