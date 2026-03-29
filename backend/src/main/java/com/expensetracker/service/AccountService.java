@@ -32,7 +32,7 @@ public class AccountService {
         if (name.isEmpty()) {
             throw new BusinessRuleException("Account name cannot be blank");
         }
-        if (accountRepository.existsByUserIdAndAccountNameIgnoreCase(user.getId(), name)) {
+        if (accountNameExists(user.getId(), name, null)) {
             throw new DuplicateResourceException("Account with this name already exists");
         }
         Account account = new Account();
@@ -60,7 +60,7 @@ public class AccountService {
             throw new BusinessRuleException("Account name cannot be blank");
         }
         if (!account.getAccountName().equalsIgnoreCase(newName)
-                && accountRepository.existsByUserIdAndAccountNameIgnoreCase(user.getId(), newName)) {
+                && accountNameExists(user.getId(), newName, accountId)) {
             throw new DuplicateResourceException("Account with this name already exists");
         }
         account.setAccountName(newName);
@@ -141,6 +141,12 @@ public class AccountService {
             throw new AccessDeniedException();
         }
         return account;
+    }
+
+    private boolean accountNameExists(Long userId, String name, Long excludeId) {
+        return accountRepository.findByUserId(userId).stream()
+                .filter(a -> excludeId == null || !a.getId().equals(excludeId))
+                .anyMatch(a -> a.getAccountName().equalsIgnoreCase(name));
     }
 
     private void recalculateBalance(Account account) {

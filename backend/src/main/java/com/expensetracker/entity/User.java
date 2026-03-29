@@ -1,5 +1,6 @@
 package com.expensetracker.entity;
 
+import com.expensetracker.security.EncryptedFieldConverter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -24,7 +25,8 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(length = 100)
+    @Convert(converter = EncryptedFieldConverter.class)
+    @Column(length = 500)
     private String fullName;
 
     @CreationTimestamp

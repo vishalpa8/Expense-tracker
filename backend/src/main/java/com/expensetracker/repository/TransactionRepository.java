@@ -17,8 +17,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     void deleteAllByAccountId(Long accountId);
 
-    @Query("SELECT DISTINCT t.category FROM Transaction t WHERE t.account.user.id = :userId AND t.category IS NOT NULL ORDER BY t.category")
-    List<String> findDistinctCategoriesByUserId(Long userId);
+    @Query("SELECT t FROM Transaction t WHERE t.account.user.id = :userId AND t.category IS NOT NULL")
+    List<Transaction> findAllWithCategoryByUserId(Long userId);
 
     @Query("SELECT COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE -t.amount END), 0) FROM Transaction t WHERE t.account.id = :accountId")
     BigDecimal calculateNetAmount(Long accountId);

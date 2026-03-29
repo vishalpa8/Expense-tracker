@@ -1,5 +1,6 @@
 package com.expensetracker.entity;
 
+import com.expensetracker.security.EncryptedFieldConverter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -10,7 +11,6 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "accounts",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "account_name"}),
     indexes = @Index(name = "idx_account_user_id", columnList = "user_id"))
 @Getter
 @Setter
@@ -28,10 +28,12 @@ public class Account {
     @JsonIgnore
     private User user;
 
-    @Column(name = "account_name", nullable = false, length = 100)
+    @Convert(converter = EncryptedFieldConverter.class)
+    @Column(name = "account_name", nullable = false, length = 500)
     private String accountName;
 
-    @Column(length = 50)
+    @Convert(converter = EncryptedFieldConverter.class)
+    @Column(length = 500)
     private String accountNumber;
 
     @Column(nullable = false, precision = 14, scale = 2)

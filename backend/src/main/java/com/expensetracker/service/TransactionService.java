@@ -103,7 +103,11 @@ public class TransactionService {
 
     @Transactional(readOnly = true)
     public List<String> getUserCategories(Long userId) {
-        return transactionRepository.findDistinctCategoriesByUserId(userId);
+        return transactionRepository.findAllWithCategoryByUserId(userId).stream()
+                .map(Transaction::getCategory)
+                .distinct()
+                .sorted()
+                .toList();
     }
 
     private void validateSufficientBalance(Account account, Transaction.TransactionType type, BigDecimal amount) {

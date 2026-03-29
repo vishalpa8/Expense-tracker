@@ -1,5 +1,6 @@
 package com.expensetracker.entity;
 
+import com.expensetracker.security.EncryptedFieldConverter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -40,20 +41,24 @@ public class Transaction {
     @Column(name = "transaction_date", nullable = false)
     private LocalDateTime transactionDate;
 
-    @Column(length = 100)
+    @Convert(converter = EncryptedFieldConverter.class)
+    @Column(length = 500)
     private String category;
 
-    @Column(length = 500)
+    @Convert(converter = EncryptedFieldConverter.class)
+    @Column(length = 1000)
     private String description;
 
-    @Column(length = 200)
+    @Convert(converter = EncryptedFieldConverter.class)
+    @Column(length = 500)
     private String senderReceiver;
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod;
 
-    @Column(length = 200)
+    @Convert(converter = EncryptedFieldConverter.class)
+    @Column(length = 500)
     private String paymentDetails;
 
     @CreationTimestamp
