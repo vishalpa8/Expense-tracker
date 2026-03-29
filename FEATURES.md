@@ -8,7 +8,7 @@ A personal finance app to track your income, expenses, and bank account balances
 
 ### Creating Your Account
 
-1. Open `http://localhost:5173` in your browser.
+1. Open [expense-tracker-vis.netlify.app](https://expense-tracker-vis.netlify.app) (or `http://localhost:5173` for local dev).
 2. Click "Sign Up" at the bottom of the login screen.
 3. Enter your full name, choose a username (letters, numbers, underscores, 3-30 chars), and set a password (min 6 characters).
 4. Click "Sign Up" — you're logged in and taken to the dashboard.

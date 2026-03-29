@@ -6,7 +6,7 @@ A personal finance application for tracking income, expenses, and bank account b
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-green)
 ![React](https://img.shields.io/badge/React-19-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
 
 ## Features
 
@@ -35,13 +35,35 @@ A personal finance application for tracking income, expenses, and bank account b
 |-------|-----------|
 | Backend | Java 21, Spring Boot 3.2, Spring Security, Spring Data JPA |
 | Frontend | React 19, TypeScript 5.9, Vite 7, Tailwind CSS 4 |
-| Database | PostgreSQL 15 |
+| Database | PostgreSQL 16 |
 | Auth | JWT (jjwt 0.12), in-memory token blacklist |
 | Rate Limiting | Bucket4j |
 | Icons | Lucide React |
 | Dates | date-fns |
 
-## Quick Start
+## Live Demo
+
+| Component | URL |
+|-----------|-----|
+| Frontend | [expense-tracker-vis.netlify.app](https://expense-tracker-vis.netlify.app) |
+| Backend API | [expense-tracker-vis.duckdns.org](https://expense-tracker-vis.duckdns.org/api) |
+
+## Deployment Architecture
+
+```
+Netlify (Frontend)  →  OCI Free Tier VM (Mumbai)
+                        ├── Nginx + Let's Encrypt SSL (:443)
+                        ├── Spring Boot (:8080)
+                        └── PostgreSQL (:5432)
+```
+
+- **Frontend**: Static React build on Netlify (auto-deploys on push)
+- **Backend**: Spring Boot JAR on Oracle Cloud Always Free VM (auto-deploys via GitHub webhook)
+- **Database**: PostgreSQL on the same VM (localhost, zero latency)
+- **SSL**: Let's Encrypt via Certbot with auto-renewal
+- **Domain**: DuckDNS free subdomain
+
+## Quick Start (Local Development)
 
 ### Prerequisites
 - Java 21+
@@ -84,6 +106,8 @@ Frontend starts on `http://localhost:5173`
 | `DB_USERNAME` | Yes | Database username |
 | `DB_PASSWORD` | Yes | Database password |
 | `JWT_SECRET` | Yes | 256-bit secret for JWT signing (use `openssl rand -base64 32`) |
+| `CORS_ORIGINS` | No | Allowed origins (default: `https://expensetracker.com`) |
+| `DDL_AUTO` | No | Hibernate DDL mode (default: `update`) |
 
 ## Project Structure
 
@@ -178,6 +202,7 @@ See [API Documentation](docs/API_DOCUMENTATION.md) for full details.
 - No unit/integration tests
 - Token blacklist is in-memory (lost on restart; use Redis for production)
 - Entities returned directly (user/version hidden via @JsonIgnore; full DTOs would decouple API from schema)
+- Backend build on deploy takes ~60-90s on 1GB RAM VM (brief downtime during restart)
 
 ## Documentation
 

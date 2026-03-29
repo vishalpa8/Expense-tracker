@@ -1,8 +1,15 @@
 # Expense Tracker API Documentation
 
 ## Base URL
+
+Local:
 ```
 http://localhost:8080/api
+```
+
+Production:
+```
+https://expense-tracker-vis.duckdns.org/api
 ```
 
 ## Authentication

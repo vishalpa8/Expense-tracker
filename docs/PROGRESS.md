@@ -74,6 +74,18 @@
 - [x] @Transactional(readOnly = true) on all read operations
 - [x] Page title set to "Expense Tracker"
 
+### Deployment
+- [x] Oracle Cloud Always Free VM (Mumbai) — Ubuntu 24.04, 1GB RAM + 2GB swap
+- [x] PostgreSQL 16 on localhost (same VM, zero latency)
+- [x] Nginx reverse proxy with Let's Encrypt SSL (auto-renewal via certbot timer)
+- [x] systemd service for Spring Boot (auto-restart on failure)
+- [x] GitHub webhook for auto-deploy on push (pull → build → restart)
+- [x] Frontend on Netlify (auto-deploy on push)
+- [x] DuckDNS free subdomain: expense-tracker-vis.duckdns.org
+- [x] Log rotation: journald capped at 100MB/7 days, nginx daily rotation
+- [x] Weekly cleanup cron: apt cache, Maven snapshots, temp files, deploy log trimming
+- [x] iptables firewall: only ports 22, 80, 443 exposed (8080 internal only via nginx)
+
 ## Known Limitations
 
 | Item | Severity | Notes |
